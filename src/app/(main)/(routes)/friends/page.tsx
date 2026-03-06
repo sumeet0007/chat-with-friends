@@ -37,7 +37,7 @@ const FriendsPage = async () => {
                 
                 <h1 className="text-md font-semibold dark:text-white text-zinc-800 ml-2">Direct Messages</h1>
             </div>
-            <FriendsComponent initialFriends={friends} initialRequests={requests} />
+            <FriendsComponent profileId={profile.id} initialFriends={friends} initialRequests={requests} />
         </div>
     );
 };

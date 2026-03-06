@@ -7,22 +7,61 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ActionTooltip } from "@/components/action-tooltip";
+import { useSocket } from "@/components/providers/socket-provider";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
 export const FriendsComponent = ({
+    profileId,
     initialFriends = [],
     initialRequests = []
 }: {
+    profileId: string;
     initialFriends?: any[];
     initialRequests?: any[];
 }) => {
+    const { socket } = useSocket();
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [friends, setFriends] = useState(initialFriends);
     const [requests, setRequests] = useState(initialRequests);
     const [activeTab, setActiveTab] = useState<"ALL" | "PENDING" | "ADD">("ALL");
     const [isLoading, setIsLoading] = useState(false);
+
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const requestsKey = `user:${profileId}:requests`;
+        const friendsKey = `user:${profileId}:friends`;
+
+        socket.on(requestsKey, (data: any) => {
+            if (data.action === "request_processed") {
+                setRequests((prev) => prev.filter((r) => r.id !== data.requestId));
+            } else {
+                setRequests((prev) => [data, ...prev]);
+            }
+            router.refresh();
+        });
+
+        socket.on(friendsKey, () => {
+            // Re-fetch friends or simply refresh router to get updated server-side props
+            // For immediate local update, refresh is easiest and cleanest as it handles sidebar too
+            router.refresh();
+        });
+
+        return () => {
+            socket.off(requestsKey);
+            socket.off(friendsKey);
+        };
+    }, [socket, profileId, router]);
+
+    // Handle prop updates from server-side re-fetching (router.refresh)
+    useEffect(() => {
+        setFriends(initialFriends);
+        setRequests(initialRequests);
+    }, [initialFriends, initialRequests]);
 
     useEffect(() => {
         if (activeTab === "ADD" && searchQuery.length > 2) {
@@ -47,7 +86,7 @@ export const FriendsComponent = ({
 
     const sendRequest = async (receiverId: string) => {
         try {
-            await axios.post("/api/friends/request", { receiverId });
+            await axios.post("/api/socket/friend-requests", { receiverId });
             // Update UI optimistically
             setSearchResults(prev => prev.map(user => 
                 user.id === receiverId ? { ...user, hasSentRequest: true } : user
@@ -57,27 +96,13 @@ export const FriendsComponent = ({
         }
     };
 
-    const router = useRouter();
-
     const respondToRequest = async (requestId: string, action: "accept" | "reject") => {
         try {
-            await axios.post("/api/friends/respond", { requestId, action });
+            await axios.post("/api/socket/friend-responses", { requestId, action });
             
-            if (action === "accept") {
-                const requestToAccept = requests.find(req => req.id === requestId);
-                if (requestToAccept) {
-                    setFriends(prev => [...prev, {
-                        id: `temp-${Date.now()}`,
-                        friend: requestToAccept.sender
-                    }]);
-                }
-            }
-
-            // Remove request from pending list
+            // UI will update via socket listener automatically, 
+            // but we can also do it optimistically for better feel
             setRequests(prev => prev.filter(req => req.id !== requestId));
-            
-            // Refresh to update server-side data (like the Sidebar) smoothly
-            router.refresh();
         } catch (error) {
             console.error(error);
         }

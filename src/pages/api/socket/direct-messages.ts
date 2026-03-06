@@ -96,8 +96,17 @@ export default async function handler(
         });
 
         const channelKey = `chat:${conversationId}:messages`;
-
         res?.socket?.server?.io?.emit(channelKey, message);
+
+        // Global notification for the recipient
+        const otherMember = conversation.memberOne.profileId === profile.id ? conversation.memberTwo : conversation.memberOne;
+        const notificationKey = `user:${otherMember.profileId}:notifications`;
+        res?.socket?.server?.io?.emit(notificationKey, {
+            type: "message",
+            conversationId,
+            senderName: profile.name,
+            content: content.length > 50 ? content.substring(0, 50) + "..." : content
+        });
 
         return res.status(200).json(message);
     } catch (error) {

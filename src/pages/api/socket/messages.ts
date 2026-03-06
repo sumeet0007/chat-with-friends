@@ -96,8 +96,23 @@ export default async function handler(
         });
 
         const channelKey = `chat:${channelId}:messages`;
-
         res?.socket?.server?.io?.emit(channelKey, message);
+
+        // Global notifications for other members
+        server.members.forEach((m) => {
+            if (m.profileId !== profile.id) {
+                const notificationKey = `user:${m.profileId}:notifications`;
+                res?.socket?.server?.io?.emit(notificationKey, {
+                    type: "channel_message",
+                    serverId,
+                    channelId,
+                    serverName: server.name,
+                    channelName: channel.name,
+                    senderName: profile.name,
+                    content: content.length > 50 ? content.substring(0, 50) + "..." : content
+                });
+            }
+        });
 
         return res.status(200).json(message);
     } catch (error) {
