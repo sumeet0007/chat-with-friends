@@ -57,22 +57,31 @@ export const FriendsComponent = ({
         }
     };
 
+    const router = useRouter();
+
     const respondToRequest = async (requestId: string, action: "accept" | "reject") => {
         try {
             await axios.post("/api/friends/respond", { requestId, action });
+            
+            if (action === "accept") {
+                const requestToAccept = requests.find(req => req.id === requestId);
+                if (requestToAccept) {
+                    setFriends(prev => [...prev, {
+                        id: `temp-${Date.now()}`,
+                        friend: requestToAccept.sender
+                    }]);
+                }
+            }
+
             // Remove request from pending list
             setRequests(prev => prev.filter(req => req.id !== requestId));
-            if (action === "accept") {
-                // If this were a real-time system, we'd add them to friends list via websocket socket event
-                // For now, we rely on page refresh or local state hack (optional)
-                window.location.reload();
-            }
+            
+            // Refresh to update server-side data (like the Sidebar) smoothly
+            router.refresh();
         } catch (error) {
             console.error(error);
         }
     };
-    
-    const router = useRouter();
 
     const dmFriend = async (friendId: string) => {
         try {
