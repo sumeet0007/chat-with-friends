@@ -23,9 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" className="h-full">
         <body
-          className={`${inter.className} bg-discord-bg text-discord-text antialiased`}
+          className={`${inter.className} bg-discord-bg text-discord-text antialiased h-full`}
         >
           <SocketProvider>
             <QueryProvider>

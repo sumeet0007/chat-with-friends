@@ -8,13 +8,12 @@ import { ChatHeader } from "@/components/chat/chat-header";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
 import { NavigationSidebar } from "@/components/navigation/navigation-sidebar";
-import { ServerSidebar } from "@/components/server/server-sidebar";
+import { FriendsSidebar } from "@/components/friends/friends-sidebar";
 import { MediaRoom } from "@/components/media-room";
 
 interface MemberIdPageProps {
     params: Promise<{
         memberId: string;
-        serverId: string;
     }>;
     searchParams: Promise<{
         video?: boolean;
@@ -26,7 +25,7 @@ const MemberIdPage = async ({
     searchParams
 }: MemberIdPageProps) => {
     const profile = await currentProfile();
-    const { memberId, serverId } = await params;
+    const { memberId } = await params;
     const resolvedSearchParams = await searchParams;
 
     if (!profile) {
@@ -34,9 +33,17 @@ const MemberIdPage = async ({
         return redirectToSignIn();
     }
 
+    const dmServer = await db.server.findFirst({
+        where: { name: "GLOBAL_DMS_SERVER" }
+    });
+
+    if (!dmServer) {
+        return redirect("/friends");
+    }
+
     const currentMember = await db.member.findFirst({
         where: {
-            serverId,
+            serverId: dmServer.id,
             profileId: profile.id,
         },
         include: {
@@ -45,13 +52,13 @@ const MemberIdPage = async ({
     });
 
     if (!currentMember) {
-        return redirect("/");
+        return redirect("/friends");
     }
 
     const otherMember = await db.member.findFirst({
         where: {
             id: memberId,
-            serverId,
+            serverId: dmServer.id,
         },
         include: {
             profile: true,
@@ -59,13 +66,13 @@ const MemberIdPage = async ({
     });
 
     if (!otherMember) {
-        return redirect(`/servers/${serverId}`);
+        return redirect("/friends");
     }
 
     const conversation = await getOrCreateConversation(currentMember.id, otherMember.id);
 
     if (!conversation) {
-        return redirect(`/servers/${serverId}`);
+        return redirect("/friends");
     }
 
     const { memberOne, memberTwo } = conversation;
@@ -74,10 +81,10 @@ const MemberIdPage = async ({
     const conversationOtherMember = isMemberOneCurrentUser ? memberTwo : memberOne;
 
     return (
-        <div className="bg-white dark:bg-[#313338] flex flex-col h-full">
+        <div className="bg-white dark:bg-[#313338] flex flex-col h-full w-full">
             <ChatHeader
                 name={conversationOtherMember.profile.name}
-                serverId={serverId}
+                serverId={dmServer.id}
                 type="conversation"
                 imageUrl={conversationOtherMember.profile.imageUrl}
             >
@@ -85,7 +92,7 @@ const MemberIdPage = async ({
                     <NavigationSidebar />
                 </div>
                 <div className="flex-1 bg-[#F2F3F5] dark:bg-[#2B2D31]">
-                    <ServerSidebar serverId={serverId} />
+                    <FriendsSidebar />
                 </div>
             </ChatHeader>
             {resolvedSearchParams.video && (
@@ -122,7 +129,7 @@ const MemberIdPage = async ({
                 </>
             )}
         </div>
-    )
+    );
 }
 
 export default MemberIdPage;

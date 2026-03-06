@@ -18,6 +18,11 @@ model Profile {
   members  Member[]
   channels Channel[]
 
+  sentRequests    FriendRequest[] @relation("SentRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedRequests")
+  friends         Friend[]        @relation("ProfileFriends")
+  friendOf        Friend[]        @relation("FriendOf")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -148,4 +153,36 @@ model DirectMessage {
 
   @@index([conversationId])
   @@index([memberId])
+}
+
+model Friend {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  profileId String   @db.ObjectId
+  profile   Profile  @relation("ProfileFriends", fields: [profileId], references: [id], onDelete: Cascade)
+  
+  friendId  String   @db.ObjectId
+  friend    Profile  @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, friendId])
+  @@index([profileId])
+  @@index([friendId])
+}
+
+model FriendRequest {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  senderId  String   @db.ObjectId
+  sender    Profile  @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  receiverId String  @db.ObjectId
+  receiver   Profile @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
 }

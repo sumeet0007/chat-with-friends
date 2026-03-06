@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 
 import { NavigationAction } from "./navigation-action";
 import { NavigationItem } from "./navigation-item";
+import { NavigationFriends } from "./navigation-friends";
 
 export const NavigationSidebar = async () => {
     const user = await currentUser();
@@ -28,6 +29,9 @@ export const NavigationSidebar = async () => {
 
     const servers = await db.server.findMany({
         where: {
+            name: {
+                not: "GLOBAL_DMS_SERVER"
+            },
             members: {
                 some: {
                     profileId: profile.id
@@ -40,6 +44,10 @@ export const NavigationSidebar = async () => {
         <div
             className="space-y-4 flex flex-col items-center h-full text-primary w-full bg-[#E3E5E8] dark:bg-[#1E1F22] py-3"
         >
+            <NavigationFriends />
+            <Separator
+                className="h-[2px] bg-zinc-300 dark:bg-zinc-700 rounded-md w-10 mx-auto"
+            />
             <NavigationAction />
             <Separator
                 className="h-[2px] bg-zinc-300 dark:bg-zinc-700 rounded-md w-10 mx-auto"
@@ -62,6 +70,8 @@ export const NavigationSidebar = async () => {
                             avatarBox: "h-[48px] w-[48px]"
                         }
                     }}
+                    userProfileMode="navigation"
+                    userProfileUrl="/user-profile"
                 />
             </div>
         </div>

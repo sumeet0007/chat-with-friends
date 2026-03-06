@@ -88,6 +88,14 @@ export const ServerSidebar = async ({
     const videoChannels = server.channels.filter((channel) => channel.type === ChannelType.VIDEO)
     const members = server.members.filter((member) => member.profileId !== profile.id)
 
+    // Find all users in this server that are explicitly also on your friend list
+    const myFriends = await (db as any).friend.findMany({
+        where: { profileId: profile.id },
+        include: { friend: true }
+    });
+    const friendProfileIds = myFriends.map((f: any) => f.friendId);
+    const serverFriends = members.filter(member => friendProfileIds.includes(member.profileId));
+
     const role = server.members.find((member) => member.profileId === profile.id)?.role;
 
     return (
@@ -100,6 +108,15 @@ export const ServerSidebar = async ({
                 <div className="mt-2">
                     <ServerSearch
                         data={[
+                            {
+                                label: "Friends in Server",
+                                type: "member",
+                                data: serverFriends?.map((member) => ({
+                                    id: member.id,
+                                    name: member.profile.name,
+                                    icon: roleIconMap[member.role]
+                                }))
+                            },
                             {
                                 label: "Text Channels",
                                 type: "channel",
@@ -128,9 +145,9 @@ export const ServerSidebar = async ({
                                 }))
                             },
                             {
-                                label: "Members",
+                                label: "Other Members",
                                 type: "member",
-                                data: members?.map((member) => ({
+                                data: members?.filter(m => !friendProfileIds.includes(m.profileId))?.map((member) => ({
                                     id: member.id,
                                     name: member.profile.name,
                                     icon: roleIconMap[member.role]
@@ -200,16 +217,35 @@ export const ServerSidebar = async ({
                         </div>
                     </div>
                 )}
-                {!!members?.length && (
+                {!!serverFriends?.length && (
                     <div className="mb-2">
                         <ServerSection
                             sectionType="members"
                             role={role}
-                            label="Members"
+                            label="Friends in Server"
                             server={server}
                         />
                         <div className="space-y-[2px]">
-                            {members.map((member) => (
+                            {serverFriends.map((member) => (
+                                <ServerMember
+                                    key={member.id}
+                                    member={member}
+                                    server={server}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {!!members?.filter(m => !friendProfileIds.includes(m.profileId))?.length && (
+                    <div className="mb-2">
+                        <ServerSection
+                            sectionType="members"
+                            role={role}
+                            label={serverFriends.length > 0 ? "Other Members" : "Members"}
+                            server={server}
+                        />
+                        <div className="space-y-[2px]">
+                            {members.filter(m => !friendProfileIds.includes(m.profileId)).map((member) => (
                                 <ServerMember
                                     key={member.id}
                                     member={member}

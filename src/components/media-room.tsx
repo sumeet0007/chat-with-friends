@@ -57,6 +57,7 @@ export const MediaRoom = ({
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
             connect={true}
+            className="flex-1 w-full bg-[#1E1F22]"
         >
             <VideoConference />
         </LiveKitRoom>
