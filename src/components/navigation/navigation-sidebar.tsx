@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
+import { UserMenu } from "./user-menu";
+import { ModeToggle } from "@/components/mode-toggle";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -64,15 +65,8 @@ export const NavigationSidebar = async () => {
                 ))}
             </ScrollArea>
             <div className="pb-3 mt-auto flex items-center flex-col gap-y-4">
-                <UserButton
-                    appearance={{
-                        elements: {
-                            avatarBox: "h-[48px] w-[48px]"
-                        }
-                    }}
-                    userProfileMode="navigation"
-                    userProfileUrl="/user-profile"
-                />
+                <ModeToggle />
+                <UserMenu imageUrl={profile.imageUrl} />
             </div>
         </div>
     )

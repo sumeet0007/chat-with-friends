@@ -2,8 +2,8 @@
 
 import { ChannelType, MemberRole } from "@prisma/client";
 import { Plus, Settings } from "lucide-react";
-
 import { ModalType, useModal } from "@/hooks/use-modal-store";
+import { useRouter } from "next/navigation";
 import { ActionTooltip } from "@/components/action-tooltip";
 
 interface ServerSectionProps {
@@ -22,6 +22,7 @@ export const ServerSection = ({
     server,
 }: ServerSectionProps) => {
     const { onOpen } = useModal();
+    const router = useRouter();
 
     return (
         <div className="flex items-center justify-between py-2">
@@ -31,7 +32,7 @@ export const ServerSection = ({
             {role !== MemberRole.GUEST && sectionType === "channels" && (
                 <ActionTooltip label="Create Channel" side="top">
                     <button
-                        onClick={() => onOpen("createChannel", { channelType })}
+                        onClick={() => router.push(`/servers/${server?.id || ''}/channels/create?channelType=${channelType}`)}
                         className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition"
                     >
                         <Plus className="h-4 w-4" />

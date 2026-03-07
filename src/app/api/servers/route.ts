@@ -23,11 +23,13 @@ export async function POST(req: Request) {
             return new NextResponse("Profile not found", { status: 404 });
         }
 
+        const finalImageUrl = imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=5865F2&color=fff`;
+
         const server = await db.server.create({
             data: {
                 profileId: profile.id,
                 name,
-                imageUrl,
+                imageUrl: finalImageUrl,
                 inviteCode: crypto.randomUUID(), // Unique invite link string
                 channels: {
                     create: [

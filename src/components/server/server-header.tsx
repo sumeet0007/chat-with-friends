@@ -20,6 +20,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useModal } from "@/hooks/use-modal-store";
+import { useRouter } from "next/navigation";
 
 interface ServerHeaderProps {
     server: ServerWithMembersWithProfiles;
@@ -31,6 +32,7 @@ export const ServerHeader = ({
     role
 }: ServerHeaderProps) => {
     const { onOpen } = useModal();
+    const router = useRouter();
 
     const isAdmin = role === MemberRole.ADMIN;
     const isModerator = isAdmin || role === MemberRole.MODERATOR;
@@ -79,6 +81,7 @@ export const ServerHeader = ({
                 )}
                 {isModerator && (
                     <DropdownMenuItem
+                        onClick={() => router.push(`/servers/${server.id}/channels/create`)}
                         className="px-3 py-2 text-sm cursor-pointer"
                     >
                         Create Channel

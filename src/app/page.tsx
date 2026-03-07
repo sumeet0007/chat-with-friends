@@ -1,7 +1,6 @@
 import { initialProfile } from "@/lib/initial-profile";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { InitialModal } from "@/components/modals/initial-modal";
 
 export default async function SetupPage() {
   const profile = await initialProfile();
@@ -20,5 +19,5 @@ export default async function SetupPage() {
     return redirect(`/servers/${server.id}`);
   }
 
-  return <InitialModal />;
+  return redirect("/friends");
 }

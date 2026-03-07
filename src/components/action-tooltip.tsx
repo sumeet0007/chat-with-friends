@@ -16,15 +16,17 @@ export const ActionTooltip = ({
     align
 }: ActionTooltipProps) => {
     return (
-        <Tooltip>
-            <TooltipTrigger asChild>
-                {children}
-            </TooltipTrigger>
-            <TooltipContent side={side} align={align} className="hidden md:block">
-                <p className="font-semibold text-sm capitalize">
-                    {label}
-                </p>
-            </TooltipContent>
-        </Tooltip>
+        <TooltipProvider delayDuration={50}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    {children}
+                </TooltipTrigger>
+                <TooltipContent side={side} align={align} className="hidden md:block">
+                    <p className="font-semibold text-sm capitalize">
+                        {label}
+                    </p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     )
 }

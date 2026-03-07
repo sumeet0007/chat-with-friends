@@ -1,20 +1,26 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ModalProvider } from "@/components/providers/modal-provider";
 import { NotificationHandler } from "@/components/notification-handler";
 import { SocketProvider } from "@/components/providers/socket-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
-const inter = Inter({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
+  variable: "--font-space-grotesk",
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta",
 });
 
 export const metadata: Metadata = {
-  title: "Discord Clone",
-  description: "A functional Discord clone built with Next.js",
+  title: "Pulse | Next-Gen Communications",
+  description: "A futuristic communications platform",
 };
 
 export default function RootLayout({
@@ -24,19 +30,25 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className="h-full">
+      <html lang="en" className="h-full" suppressHydrationWarning>
         <body
-          className={`${inter.className} bg-discord-bg text-discord-text antialiased h-full`}
+          className={`${plusJakarta.className} ${spaceGrotesk.variable} ${plusJakarta.variable} bg-discord-bg text-discord-text antialiased h-full`}
         >
-          <SocketProvider>
-            <QueryProvider>
-              <TooltipProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            storageKey="pulse-theme"
+            themes={["light", "dark", "cyberpunk"]}
+          >
+            <SocketProvider>
+              <QueryProvider>
                 <ModalProvider />
                 <NotificationHandler />
                 {children}
-              </TooltipProvider>
-            </QueryProvider>
-          </SocketProvider>
+              </QueryProvider>
+            </SocketProvider>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

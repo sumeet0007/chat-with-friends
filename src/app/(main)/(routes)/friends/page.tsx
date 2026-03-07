@@ -8,7 +8,7 @@ import { FriendsSidebar } from "@/components/friends/friends-sidebar";
 
 const FriendsPage = async () => {
     const profile = await currentProfile();
-    
+
     if (!profile) {
         return redirect("/");
     }
@@ -34,7 +34,7 @@ const FriendsPage = async () => {
                         <FriendsSidebar />
                     </div>
                 </MobileToggle>
-                
+
                 <h1 className="text-md font-semibold dark:text-white text-zinc-800 ml-2">Direct Messages</h1>
             </div>
             <FriendsComponent profileId={profile.id} initialFriends={friends} initialRequests={requests} />

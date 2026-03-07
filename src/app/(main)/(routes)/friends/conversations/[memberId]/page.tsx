@@ -81,7 +81,7 @@ const MemberIdPage = async ({
     const conversationOtherMember = isMemberOneCurrentUser ? memberTwo : memberOne;
 
     return (
-        <div className="bg-white dark:bg-[#313338] flex flex-col h-full w-full">
+        <div className="bg-white dark:bg-[#313338] flex flex-col h-full w-full relative">
             <ChatHeader
                 name={conversationOtherMember.profile.name}
                 serverId={dmServer.id}

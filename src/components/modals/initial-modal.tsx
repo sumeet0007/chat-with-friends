@@ -31,9 +31,7 @@ const formSchema = z.object({
     name: z.string().min(1, {
         message: "Server name is required.",
     }),
-    imageUrl: z.string().min(1, {
-        message: "Server image is required.",
-    }),
+    imageUrl: z.string().optional(),
 });
 
 export const InitialModal = () => {
@@ -97,7 +95,7 @@ export const InitialModal = () => {
                                             <FormControl>
                                                 <FileUpload
                                                     endpoint="serverImage"
-                                                    value={field.value}
+                                                    value={field.value || ""}
                                                     onChange={field.onChange}
                                                 />
                                             </FormControl>
