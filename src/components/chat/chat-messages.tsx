@@ -125,11 +125,8 @@ export const ChatMessages = ({
     }
 
     return (
-        <div
-            ref={chatRef}
-            className="flex-1 flex flex-col py-4 overflow-y-auto relative"
-        >
-            {/* Theme Background Layer */}
+        <div className="flex-1 flex flex-col relative overflow-hidden h-full">
+            {/* Theme Background Layer - Fixed behind content */}
             <div
                 className="absolute inset-0 pointer-events-none bg-no-repeat bg-cover bg-center"
                 style={{
@@ -142,8 +139,10 @@ export const ChatMessages = ({
                 <div className="absolute inset-0 bg-black/40 pointer-events-none" style={{ zIndex: 0 }} />
             )}
 
-            {/* Content Layer */}
-            <div className="relative z-10 flex flex-col flex-1">
+            <div
+                ref={chatRef}
+                className="flex-1 flex flex-col py-4 overflow-y-auto relative z-10"
+            >
                 {!hasNextPage && <div className="flex-1" />}
                 {!hasNextPage && (
                     <ChatWelcome

@@ -78,6 +78,7 @@ const MemberIdPage = async ({
             <ChatHeader
                 name={conversationOtherMember.profile.name}
                 serverId={serverId}
+                chatId={conversation.id}
                 type="conversation"
                 imageUrl={conversationOtherMember.profile.imageUrl}
             >

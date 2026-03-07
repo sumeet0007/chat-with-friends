@@ -12,6 +12,7 @@ import { ActionTooltip } from "../action-tooltip";
 
 interface ChatHeaderProps {
     serverId: string;
+    chatId: string;
     name: string;
     type: "channel" | "conversation";
     imageUrl?: string;
@@ -20,15 +21,13 @@ interface ChatHeaderProps {
 
 export const ChatHeader = ({
     serverId,
+    chatId,
     name,
     type,
     imageUrl,
     children
 }: ChatHeaderProps) => {
     const { onOpen } = useModal();
-    const params = useParams();
-
-    const chatId = params?.channelId || params?.conversationId;
     return (
         <div className="text-md font-semibold px-3 flex items-center h-12 border-neutral-200 dark:border-neutral-800 border-b-2">
             <MobileToggle>

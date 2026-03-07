@@ -61,11 +61,15 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-[95%] sm:max-w-lg max-h-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border bg-background/95 backdrop-blur-md p-6 shadow-2xl overflow-y-auto duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+          "fixed z-50 grid w-full gap-4 border bg-background/95 backdrop-blur-xl shadow-2xl duration-300 outline-none p-6",
+          "bottom-0 rounded-t-[2.5rem] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-full",
+          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-full",
+          "sm:bottom-auto sm:top-[50%] sm:left-[50%] sm:w-[calc(100%-2.5rem)] sm:max-w-lg sm:max-h-[calc(100%-4rem)] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-bottom-0 overflow-y-auto",
           className
         )}
         {...props}
       >
+        <div className="mx-auto mt-2 h-1.5 w-12 shrink-0 rounded-full bg-zinc-300 dark:bg-zinc-700 sm:hidden" />
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close

@@ -57,6 +57,7 @@ const ChannelIdPage = async ({
             <ChatHeader
                 name={channel.name}
                 serverId={channel.serverId}
+                chatId={channel.id}
                 type="channel"
             >
                 <div className="w-[72px]">
