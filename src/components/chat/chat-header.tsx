@@ -1,11 +1,14 @@
 "use client";
 
-import { Hash } from "lucide-react";
+import { Hash, Palette } from "lucide-react";
 
 import { SocketIndicator } from "@/components/socket-indicator";
 import { UserAvatar } from "@/components/user-avatar";
 import { MobileToggle } from "@/components/mobile-toggle";
 import { ChatVideoButton } from "./chat-video-button";
+import { useModal } from "@/hooks/use-modal-store";
+import { useParams } from "next/navigation";
+import { ActionTooltip } from "../action-tooltip";
 
 interface ChatHeaderProps {
     serverId: string;
@@ -22,6 +25,10 @@ export const ChatHeader = ({
     imageUrl,
     children
 }: ChatHeaderProps) => {
+    const { onOpen } = useModal();
+    const params = useParams();
+
+    const chatId = params?.channelId || params?.conversationId;
     return (
         <div className="text-md font-semibold px-3 flex items-center h-12 border-neutral-200 dark:border-neutral-800 border-b-2">
             <MobileToggle>
@@ -43,6 +50,14 @@ export const ChatHeader = ({
                 {type === "conversation" && (
                     <ChatVideoButton />
                 )}
+                <ActionTooltip label="Chat Theme" side="bottom">
+                    <button
+                        onClick={() => onOpen("chatTheme", { query: { chatId } })}
+                        className="mr-4 hover:opacity-75 transition"
+                    >
+                        <Palette className="h-5 w-5 text-zinc-500 dark:text-zinc-400" />
+                    </button>
+                </ActionTooltip>
                 <SocketIndicator />
             </div>
         </div>

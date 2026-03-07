@@ -6,7 +6,7 @@ import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
-import { Edit, FileIcon, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
+import { Edit, FileIcon, MessageSquare, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
+import { useReplyStore } from "@/hooks/use-reply-store";
 
 const formSchema = z.object({
     content: z.string().min(1),
@@ -40,6 +41,13 @@ interface ChatItemProps {
     isUpdated: boolean;
     socketUrl: string;
     socketQuery: Record<string, string>;
+    replyToId?: string | null;
+    replyTo?: {
+        content: string;
+        member: Member & {
+            profile: Profile;
+        };
+    } | null;
 };
 
 const roleIconMap = {
@@ -58,10 +66,13 @@ export const ChatItem = ({
     currentMember,
     isUpdated,
     socketUrl,
-    socketQuery
+    socketQuery,
+    replyToId,
+    replyTo
 }: ChatItemProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const { onOpen } = useModal();
+    const { setReply } = useReplyStore();
     const params = useParams();
     const router = useRouter();
 
@@ -133,6 +144,16 @@ export const ChatItem = ({
                     <UserAvatar src={member.profile.imageUrl} />
                 </div>
                 <div className="flex flex-col w-full">
+                    {replyTo && (
+                        <div className="flex items-center gap-x-2 ml-1 mb-1">
+                            <div className="w-1 h-4 border-l-2 border-zinc-400 dark:border-zinc-500 rounded-bl-md ml-2" />
+                            <div className="flex items-center gap-x-2 text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[80%]">
+                                <UserAvatar src={replyTo.member.profile.imageUrl} className="h-4 w-4" />
+                                <span className="font-semibold text-indigo-500 whitespace-nowrap">{replyTo.member.profile.name}</span>
+                                <span className="italic truncate">{replyTo.content}</span>
+                            </div>
+                        </div>
+                    )}
                     <div className="flex items-center gap-x-2">
                         <div className="flex items-center">
                             <p onClick={onMemberClick} className="font-semibold text-sm hover:underline cursor-pointer">
@@ -220,8 +241,16 @@ export const ChatItem = ({
                     )}
                 </div>
             </div>
-            {canDeleteMessage && (
-                <div className="hidden group-hover:flex items-center gap-x-2 absolute p-1 -top-2 right-5 bg-white dark:bg-zinc-800 border rounded-sm">
+
+            {!deleted && (
+                <div className="flex items-center gap-x-2 absolute p-1 -top-2 right-5 bg-white dark:bg-zinc-800 border rounded-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <ActionTooltip label="Reply">
+                        <MessageSquare
+                            onClick={() => setReply({ id, name: member.profile.name, content })}
+                            className="cursor-pointer text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 w-4 h-4 transition"
+                        />
+                    </ActionTooltip>
+
                     {canEditMessage && (
                         <ActionTooltip label="Edit">
                             <Edit
@@ -230,17 +259,21 @@ export const ChatItem = ({
                             />
                         </ActionTooltip>
                     )}
-                    <ActionTooltip label="Delete">
-                        <Trash
-                            onClick={() => onOpen("deleteMessage", {
-                                apiUrl: `${socketUrl}/${id}`,
-                                query: socketQuery,
-                            })}
-                            className="cursor-pointer ml-auto w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition"
-                        />
-                    </ActionTooltip>
+
+                    {canDeleteMessage && (
+                        <ActionTooltip label="Delete">
+                            <Trash
+                                onClick={() => onOpen("deleteMessage", {
+                                    apiUrl: `${socketUrl}/${id}`,
+                                    query: socketQuery,
+                                })}
+                                className="cursor-pointer ml-auto w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition"
+                            />
+                        </ActionTooltip>
+                    )}
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     )
 }

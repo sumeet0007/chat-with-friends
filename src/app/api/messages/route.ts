@@ -41,6 +41,15 @@ export async function GET(
                         include: {
                             profile: true,
                         }
+                    },
+                    replyTo: {
+                        include: {
+                            member: {
+                                include: {
+                                    profile: true,
+                                }
+                            }
+                        }
                     }
                 },
                 orderBy: {
@@ -57,6 +66,15 @@ export async function GET(
                     member: {
                         include: {
                             profile: true,
+                        }
+                    },
+                    replyTo: {
+                        include: {
+                            member: {
+                                include: {
+                                    profile: true,
+                                }
+                            }
                         }
                     }
                 },

@@ -14,13 +14,43 @@ interface NotificationStore {
     notifications: AppNotification[];
     addNotification: (notification: Omit<AppNotification, "id">) => void;
     removeNotification: (id: string) => void;
+    requestBrowserPermission: () => Promise<void>;
 }
 
-export const useNotifications = create<NotificationStore>((set) => ({
+export const useNotifications = create<NotificationStore>((set, get) => ({
     notifications: [],
-    addNotification: (notification) => set((state) => ({
-        notifications: [{ ...notification, id: Math.random().toString() }, ...state.notifications]
-    })),
+
+    requestBrowserPermission: async () => {
+        if ("Notification" in window) {
+            await Notification.requestPermission();
+        }
+    },
+
+    addNotification: (notification) => {
+        const id = Math.random().toString();
+
+        // Trigger browser notification if document is not visible/focused
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            if (document.hidden || !document.hasFocus()) {
+                const browserNotification = new Notification(notification.title, {
+                    body: notification.description,
+                    icon: "/logo.png", // Assuming there is a logo
+                });
+
+                browserNotification.onclick = () => {
+                    window.focus();
+                    if (notification.actionUrl) {
+                        window.location.href = notification.actionUrl;
+                    }
+                };
+            }
+        }
+
+        set((state) => ({
+            notifications: [{ ...notification, id }, ...state.notifications]
+        }));
+    },
+
     removeNotification: (id) => set((state) => ({
         notifications: state.notifications.filter((n) => n.id !== id)
     }))

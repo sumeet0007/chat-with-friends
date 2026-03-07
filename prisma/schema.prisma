@@ -18,10 +18,10 @@ model Profile {
   members  Member[]
   channels Channel[]
 
-  sentRequests    FriendRequest[] @relation("SentRequests")
+  sentRequests     FriendRequest[] @relation("SentRequests")
   receivedRequests FriendRequest[] @relation("ReceivedRequests")
-  friends         Friend[]        @relation("ProfileFriends")
-  friendOf        Friend[]        @relation("FriendOf")
+  friends          Friend[]        @relation("ProfileFriends")
+  friendOf         Friend[]        @relation("FriendOf")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -61,10 +61,10 @@ model Member {
   serverId String @db.ObjectId
   server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
-  messages Message[]
-  directMessages DirectMessage[]
-  conversationsInitiated Conversation[] @relation("MemberOne")
-  conversationsReceived Conversation[] @relation("MemberTwo")
+  messages               Message[]
+  directMessages         DirectMessage[]
+  conversationsInitiated Conversation[]  @relation("MemberOne")
+  conversationsReceived  Conversation[]  @relation("MemberTwo")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -113,11 +113,16 @@ model Message {
 
   deleted Boolean @default(false)
 
+  replyToId String? @db.ObjectId
+  replyTo   Message? @relation("ReplyTo", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   Message[] @relation("ReplyTo")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([channelId])
   @@index([memberId])
+  @@index([replyToId])
 }
 
 model Conversation {
@@ -148,21 +153,26 @@ model DirectMessage {
 
   deleted Boolean @default(false)
 
+  replyToId String? @db.ObjectId
+  replyTo   DirectMessage? @relation("DirectReplyTo", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   DirectMessage[] @relation("DirectReplyTo")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([conversationId])
   @@index([memberId])
+  @@index([replyToId])
 }
 
 model Friend {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  
-  profileId String   @db.ObjectId
-  profile   Profile  @relation("ProfileFriends", fields: [profileId], references: [id], onDelete: Cascade)
-  
-  friendId  String   @db.ObjectId
-  friend    Profile  @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  profileId String  @db.ObjectId
+  profile   Profile @relation("ProfileFriends", fields: [profileId], references: [id], onDelete: Cascade)
+
+  friendId String  @db.ObjectId
+  friend   Profile @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -172,11 +182,11 @@ model Friend {
 }
 
 model FriendRequest {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  
-  senderId  String   @db.ObjectId
-  sender    Profile  @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
-  
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  senderId String  @db.ObjectId
+  sender   Profile @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+
   receiverId String  @db.ObjectId
   receiver   Profile @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
 
@@ -185,4 +195,16 @@ model FriendRequest {
   @@unique([senderId, receiverId])
   @@index([senderId])
   @@index([receiverId])
+}
+
+model UserChatTheme {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  profileId       String   @db.ObjectId
+  chatId          String   
+  backgroundImage String?
+  backgroundColor String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([profileId, chatId])
 }

@@ -6,17 +6,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export const NotificationHandler = () => {
-    const { notifications, removeNotification } = useNotifications();
+    const { notifications, removeNotification, requestBrowserPermission } = useNotifications();
+
+    useEffect(() => {
+        requestBrowserPermission();
+    }, []);
 
     if (notifications.length === 0) return null;
 
     return (
         <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-y-2 pointer-events-none">
             {notifications.map((notification) => (
-                <Toast 
-                    key={notification.id} 
-                    notification={notification} 
-                    onClose={() => removeNotification(notification.id)} 
+                <Toast
+                    key={notification.id}
+                    notification={notification}
+                    onClose={() => removeNotification(notification.id)}
                 />
             ))}
         </div>
@@ -51,7 +55,7 @@ const Toast = ({ notification, onClose }: { notification: AppNotification, onClo
     }[notification.type];
 
     return (
-        <div 
+        <div
             className={`
                 pointer-events-auto
                 w-80 bg-white dark:bg-[#111214] border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-2xl 
@@ -75,8 +79,8 @@ const Toast = ({ notification, onClose }: { notification: AppNotification, onClo
                     {notification.description}
                 </p>
                 {notification.actionUrl && (
-                    <Link 
-                        href={notification.actionUrl} 
+                    <Link
+                        href={notification.actionUrl}
                         onClick={() => { setIsVisible(false); setTimeout(onClose, 300); }}
                         className="text-xs text-indigo-500 hover:underline mt-2 font-semibold"
                     >

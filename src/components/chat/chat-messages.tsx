@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { DirectMessage, Member, Message, Profile } from "@prisma/client";
-import { Loader2, ServerCrash } from "lucide-react";
+import { Loader2, ServerCrash, ArrowDown } from "lucide-react";
 import { Fragment, useRef, ElementRef } from "react";
 
 import { useChatQuery } from "@/hooks/use-chat-query";
@@ -29,10 +29,14 @@ const DATE_FORMAT = "d MMM yyyy, HH:mm";
 type MessageWithMemberWithProfile = (Message | DirectMessage) & {
     member: Member & {
         profile: Profile
-    }
+    },
+    replyToId?: string | null;
+    replyTo?: any;
 }
 
 import { useChatScroll } from "@/hooks/use-chat-scroll";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 export const ChatMessages = ({
     name,
@@ -53,6 +57,20 @@ export const ChatMessages = ({
     const chatRef = useRef<ElementRef<"div">>(null);
     const bottomRef = useRef<ElementRef<"div">>(null);
 
+    const [theme, setTheme] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchTheme = async () => {
+            try {
+                const response = await axios.get(`/api/chat-theme?chatId=${paramValue}`);
+                setTheme(response.data);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchTheme();
+    }, [paramValue]);
+
     const {
         data,
         fetchNextPage,
@@ -72,13 +90,17 @@ export const ChatMessages = ({
         queryKey
     });
 
-    useChatScroll({
+    const { isAtBottom } = useChatScroll({
         chatRef,
         bottomRef,
         loadMore: fetchNextPage,
         shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
         count: data?.pages?.[0]?.items?.length ?? 0
     });
+
+    const scrollToBottom = () => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
 
     if (status === "pending") {
         return (
@@ -103,50 +125,80 @@ export const ChatMessages = ({
     }
 
     return (
-        <div ref={chatRef} className="flex-1 flex flex-col py-4 overflow-y-auto">
-            {!hasNextPage && <div className="flex-1" />}
-            {!hasNextPage && (
-                <ChatWelcome
-                    type={type}
-                    name={name}
-                />
+        <div
+            ref={chatRef}
+            className="flex-1 flex flex-col py-4 overflow-y-auto relative"
+        >
+            {/* Theme Background Layer */}
+            <div
+                className="absolute inset-0 pointer-events-none bg-no-repeat bg-cover bg-center"
+                style={{
+                    backgroundColor: theme?.backgroundColor || undefined,
+                    backgroundImage: theme?.backgroundImage ? `url(${theme.backgroundImage})` : undefined,
+                    zIndex: 0
+                }}
+            />
+            {theme?.backgroundImage && (
+                <div className="absolute inset-0 bg-black/40 pointer-events-none" style={{ zIndex: 0 }} />
             )}
-            {hasNextPage && (
-                <div className="flex justify-center">
-                    {isFetchingNextPage ? (
-                        <Loader2 className="h-6 w-6 text-zinc-500 animate-spin my-4" />
-                    ) : (
-                        <button
-                            onClick={() => fetchNextPage()}
-                            className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 text-xs my-4 transition"
-                        >
-                            Load previous messages
-                        </button>
-                    )}
+
+            {/* Content Layer */}
+            <div className="relative z-10 flex flex-col flex-1">
+                {!hasNextPage && <div className="flex-1" />}
+                {!hasNextPage && (
+                    <ChatWelcome
+                        type={type}
+                        name={name}
+                    />
+                )}
+                {hasNextPage && (
+                    <div className="flex justify-center">
+                        {isFetchingNextPage ? (
+                            <Loader2 className="h-6 w-6 text-zinc-500 animate-spin my-4" />
+                        ) : (
+                            <button
+                                onClick={() => fetchNextPage()}
+                                className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 text-xs my-4 transition"
+                            >
+                                Load previous messages
+                            </button>
+                        )}
+                    </div>
+                )}
+                <div className="flex flex-col-reverse mt-auto">
+                    {data?.pages?.map((group, i) => (
+                        <Fragment key={i}>
+                            {group.items.map((message: MessageWithMemberWithProfile) => (
+                                <ChatItem
+                                    key={message.id}
+                                    id={message.id}
+                                    currentMember={member}
+                                    member={message.member}
+                                    content={message.content}
+                                    fileUrl={message.fileUrl}
+                                    replyToId={message.replyToId}
+                                    replyTo={message.replyTo}
+                                    deleted={message.deleted}
+                                    timestamp={format(new Date(message.createdAt), DATE_FORMAT)}
+                                    isUpdated={message.updatedAt !== message.createdAt}
+                                    socketUrl={socketUrl}
+                                    socketQuery={socketQuery}
+                                />
+                            ))}
+                        </Fragment>
+                    ))}
                 </div>
-            )}
-            <div className="flex flex-col-reverse mt-auto">
-                {data?.pages?.map((group, i) => (
-                    <Fragment key={i}>
-                        {group.items.map((message: MessageWithMemberWithProfile) => (
-                            <ChatItem
-                                key={message.id}
-                                id={message.id}
-                                currentMember={member}
-                                member={message.member}
-                                content={message.content}
-                                fileUrl={message.fileUrl}
-                                deleted={message.deleted}
-                                timestamp={format(new Date(message.createdAt), DATE_FORMAT)}
-                                isUpdated={message.updatedAt !== message.createdAt}
-                                socketUrl={socketUrl}
-                                socketQuery={socketQuery}
-                            />
-                        ))}
-                    </Fragment>
-                ))}
+                <div ref={bottomRef} />
             </div>
-            <div ref={bottomRef} />
+
+            {!isAtBottom && (
+                <button
+                    onClick={scrollToBottom}
+                    className="absolute bottom-[80px] right-8 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full p-2 shadow-lg transition-all animate-bounce flex items-center justify-center z-[20]"
+                >
+                    <ArrowDown className="w-5 h-5" />
+                </button>
+            )}
         </div>
-    )
+    );
 }

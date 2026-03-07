@@ -14,7 +14,7 @@ export default async function handler(
 
     try {
         const { userId } = getAuth(req);
-        const { content, fileUrl } = req.body;
+        const { content, fileUrl, replyToId } = req.body;
         const { conversationId } = req.query;
 
         if (!userId) {
@@ -83,6 +83,7 @@ export default async function handler(
             data: {
                 content,
                 fileUrl,
+                replyToId: replyToId ? (replyToId as string) : null,
                 conversationId: conversationId as string,
                 memberId: member.id,
             },
@@ -90,6 +91,15 @@ export default async function handler(
                 member: {
                     include: {
                         profile: true,
+                    }
+                },
+                replyTo: {
+                    include: {
+                        member: {
+                            include: {
+                                profile: true,
+                            }
+                        }
                     }
                 }
             }

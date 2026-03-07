@@ -16,6 +16,7 @@ export const useChatScroll = ({
     count,
 }: ChatScrollProps) => {
     const [hasInitialized, setHasInitialized] = useState(false);
+    const [isAtBottom, setIsAtBottom] = useState(true);
 
     useEffect(() => {
         const topDiv = chatRef?.current;
@@ -25,6 +26,11 @@ export const useChatScroll = ({
 
             if (scrollTop === 0 && shouldLoadMore) {
                 loadMore();
+            }
+
+            if (topDiv) {
+                const distanceFromBottom = topDiv.scrollHeight - topDiv.scrollTop - topDiv.clientHeight;
+                setIsAtBottom(distanceFromBottom <= 100);
             }
         };
 
@@ -61,4 +67,6 @@ export const useChatScroll = ({
             }, 100);
         }
     }, [bottomRef, chatRef, count, hasInitialized]);
+
+    return { isAtBottom };
 }
