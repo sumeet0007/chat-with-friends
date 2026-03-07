@@ -59,6 +59,7 @@ const ServerIdPage = async ({ params }: ServerIdPageProps) => {
                 <ChatHeader
                     name="Welcome"
                     serverId={server.id}
+                    chatId={server.id}
                     type="channel"
                 >
                     <div className="w-[72px]">
