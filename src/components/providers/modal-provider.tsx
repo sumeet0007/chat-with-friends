@@ -12,8 +12,16 @@ import { LeaveServerModal } from "@/components/modals/leave-server-modal";
 import { DeleteServerModal } from "@/components/modals/delete-server-modal";
 import { MessageFileModal } from "@/components/modals/message-file-modal";
 import { ChatThemeModal } from "@/components/modals/chat-theme-modal";
+import { IncomingCallModal } from "@/components/modals/incoming-call-modal";
+import { CallHandler } from "@/components/call-handler";
 
-export const ModalProvider = () => {
+interface ModalProviderProps {
+    profileId?: string;
+}
+
+export const ModalProvider = ({
+    profileId
+}: ModalProviderProps) => {
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
@@ -26,6 +34,7 @@ export const ModalProvider = () => {
 
     return (
         <>
+            {profileId && <CallHandler profileId={profileId} />}
             <InviteModal />
             <EditServerModal />
             <MembersModal />
@@ -36,6 +45,7 @@ export const ModalProvider = () => {
             <MessageFileModal />
             <DeleteMessageModal />
             <ChatThemeModal />
+            <IncomingCallModal />
         </>
     )
 }

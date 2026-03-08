@@ -6,14 +6,33 @@ import { Video, VideoOff } from "lucide-react";
 
 import { ActionTooltip } from "@/components/action-tooltip";
 
-export const ChatVideoButton = () => {
+import axios from "axios";
+
+interface ChatVideoButtonProps {
+    chatId?: string;
+}
+
+export const ChatVideoButton = ({
+    chatId
+}: ChatVideoButtonProps) => {
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
 
     const isVideo = searchParams?.get("video");
 
-    const onClick = () => {
+    const onClick = async () => {
+        if (!isVideo && chatId) {
+            try {
+                await axios.post("/api/socket/call", {
+                    conversationId: chatId,
+                    action: "invite"
+                });
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
         const url = qs.stringifyUrl({
             url: pathname || "",
             query: {

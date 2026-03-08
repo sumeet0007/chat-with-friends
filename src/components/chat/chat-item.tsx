@@ -203,12 +203,17 @@ export const ChatItem = ({
                             href={fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="relative aspect-square rounded-md mt-2 overflow-hidden border flex items-center bg-secondary h-48 w-48"
+                            className={cn(
+                                "relative rounded-md mt-2 overflow-hidden border flex items-center group/image transition-all",
+                                fileUrl.includes("giphy.com") 
+                                    ? "max-w-[350px] max-h-[350px] w-auto h-auto bg-transparent border-none" 
+                                    : "max-w-[450px] max-h-[450px] w-auto h-auto bg-secondary/30 dark:bg-black/20"
+                            )}
                         >
                             <img
                                 src={fileUrl}
                                 alt={content}
-                                className="object-cover"
+                                className="w-full h-full object-contain"
                             />
                         </a>
                     )}

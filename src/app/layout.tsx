@@ -43,7 +43,6 @@ export default function RootLayout({
           >
             <SocketProvider>
               <QueryProvider>
-                <ModalProvider />
                 <NotificationHandler />
                 {children}
               </QueryProvider>

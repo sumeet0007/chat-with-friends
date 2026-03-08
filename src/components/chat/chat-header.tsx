@@ -47,7 +47,7 @@ export const ChatHeader = ({
             </p>
             <div className="ml-auto flex items-center">
                 {type === "conversation" && (
-                    <ChatVideoButton />
+                    <ChatVideoButton chatId={chatId} />
                 )}
                 <ActionTooltip label="Chat Theme" side="bottom">
                     <button
