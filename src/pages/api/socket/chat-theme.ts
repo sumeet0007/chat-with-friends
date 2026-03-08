@@ -52,6 +52,80 @@ export default async function handler(
         const updateKey = `chat:${chatId}:theme:update`;
         res?.socket?.server?.io?.emit(updateKey, theme);
 
+        // Send a system message to the chat
+        const systemMessageContent = backgroundImage 
+            ? `changed the chat wallpaper` 
+            : `cleared the chat theme`;
+
+        if (chatId.length === 24) { // Likely a MongoDB ID for channel or conversation
+            // Check if it's a channel first
+            const channel = await db.channel.findUnique({
+                where: { id: chatId }
+            });
+
+            if (channel) {
+                const member = await db.member.findFirst({
+                    where: {
+                        serverId: channel.serverId,
+                        profileId: profile.id
+                    }
+                });
+
+                if (member) {
+                    const message = await db.message.create({
+                        data: {
+                            content: systemMessageContent,
+                            channelId: chatId,
+                            memberId: member.id,
+                        },
+                        include: {
+                            member: {
+                                include: {
+                                    profile: true
+                                }
+                            }
+                        }
+                    });
+
+                    const channelKey = `chat:${chatId}:messages`;
+                    res?.socket?.server?.io?.emit(channelKey, message);
+                }
+            } else {
+                // Check if it's a conversation
+                const conversation = await db.conversation.findUnique({
+                    where: { id: chatId },
+                    include: {
+                        memberOne: true,
+                        memberTwo: true,
+                    }
+                });
+
+                if (conversation) {
+                    const member = conversation.memberOne.profileId === profile.id 
+                        ? conversation.memberOne 
+                        : conversation.memberTwo;
+
+                    const message = await db.directMessage.create({
+                        data: {
+                            content: systemMessageContent,
+                            conversationId: chatId,
+                            memberId: member.id,
+                        },
+                        include: {
+                            member: {
+                                include: {
+                                    profile: true
+                                }
+                            }
+                        }
+                    });
+
+                    const chatKey = `chat:${chatId}:messages`;
+                    res?.socket?.server?.io?.emit(chatKey, message);
+                }
+            }
+        }
+
         return res.status(200).json(theme);
     } catch (error) {
         console.log("[CHAT_THEME_POST]", error);

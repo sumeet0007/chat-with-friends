@@ -6,9 +6,9 @@ import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
-import { Edit, FileIcon, MessageSquare, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
+import { Edit, FileIcon, MessageSquare, ShieldAlert, ShieldCheck, Trash, Palette } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { ActionTooltip } from "@/components/action-tooltip";
@@ -136,6 +136,26 @@ export const ChatItem = ({
     const canEditMessage = !deleted && isOwner && !fileUrl;
     const isPDF = fileType === "pdf" && fileUrl;
     const isImage = !isPDF && fileUrl;
+
+    const isSystemMessage = useMemo(() => {
+        return content === "changed the chat wallpaper" || content === "cleared the chat theme";
+    }, [content]);
+
+    if (isSystemMessage) {
+        return (
+            <div className="flex items-center justify-center w-full my-4 px-4 opacity-80 animate-in fade-in zoom-in duration-300">
+                <div className="flex items-center gap-x-2 bg-black/10 dark:bg-zinc-800/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-black/5 dark:border-white/5">
+                    <Palette className="h-3.5 w-3.5 text-zinc-500" />
+                    <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                        <span className="font-bold text-zinc-700 dark:text-zinc-200">
+                            {isOwner ? "You" : member.profile.name}
+                        </span>
+                        {" "}{content}
+                    </p>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="relative group flex items-center hover:bg-black/5 p-4 transition w-full">
