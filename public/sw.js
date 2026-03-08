@@ -21,3 +21,8 @@ self.addEventListener('notificationclick', function (event) {
       clients.openWindow(event.notification.data.url || '/')
   )
 })
+
+self.addEventListener('fetch', function(event) {
+  // A simple pass-through to satisfy the PWA install requirement
+  event.respondWith(fetch(event.request));
+});

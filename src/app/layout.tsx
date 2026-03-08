@@ -22,6 +22,18 @@ export const metadata: Metadata = {
   title: "Pulse | Next-Gen Communications",
   description: "A futuristic communications platform",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Pulse",
+  },
+};
+
+export const viewport = {
+  themeColor: "#4f46e5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
