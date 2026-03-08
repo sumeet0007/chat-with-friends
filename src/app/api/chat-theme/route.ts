@@ -19,12 +19,9 @@ export async function GET(
             return new NextResponse("Chat ID missing", { status: 400 });
         }
 
-        const theme = await db.userChatTheme.findUnique({
+        const theme = await (db as any).chatTheme.findUnique({
             where: {
-                profileId_chatId: {
-                    profileId: profile.id,
-                    chatId: chatId,
-                }
+                chatId: chatId,
             }
         });
 

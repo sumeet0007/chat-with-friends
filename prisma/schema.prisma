@@ -197,14 +197,11 @@ model FriendRequest {
   @@index([receiverId])
 }
 
-model UserChatTheme {
+model ChatTheme {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  profileId       String   @db.ObjectId
-  chatId          String   
+  chatId          String   @unique
   backgroundImage String?
   backgroundColor String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-
-  @@unique([profileId, chatId])
 }

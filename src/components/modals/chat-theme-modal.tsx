@@ -58,12 +58,11 @@ export const ChatThemeModal = () => {
     const onSave = async () => {
         try {
             setIsLoading(true);
-            await axios.post("/api/chat-theme", {
+            await axios.post("/api/socket/chat-theme", {
                 chatId,
                 backgroundColor,
                 backgroundImage,
             });
-            router.refresh();
             onClose();
         } catch (error) {
             console.error(error);

@@ -7,6 +7,7 @@ import { Fragment, useRef, ElementRef } from "react";
 
 import { useChatQuery } from "@/hooks/use-chat-query";
 import { useChatSocket } from "@/hooks/use-chat-socket";
+import { useSocket } from "@/components/providers/socket-provider";
 
 import { ChatWelcome } from "./chat-welcome";
 import { ChatItem } from "./chat-item";
@@ -59,6 +60,8 @@ export const ChatMessages = ({
 
     const [theme, setTheme] = useState<any>(null);
 
+    const { socket } = useSocket();
+
     useEffect(() => {
         const fetchTheme = async () => {
             try {
@@ -69,7 +72,18 @@ export const ChatMessages = ({
             }
         };
         fetchTheme();
-    }, [paramValue]);
+
+        if (socket) {
+            const themeKey = `chat:${paramValue}:theme:update`;
+            socket.on(themeKey, (updatedTheme: any) => {
+                setTheme(updatedTheme);
+            });
+
+            return () => {
+                socket.off(themeKey);
+            }
+        }
+    }, [paramValue, socket]);
 
     const {
         data,
