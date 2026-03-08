@@ -13,6 +13,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef } from "react";
 
+import axios from "axios";
+
 export const IncomingCallModal = () => {
     const { isOpen, onClose, type, data } = useModal();
     const router = useRouter();
@@ -25,10 +27,9 @@ export const IncomingCallModal = () => {
 
     useEffect(() => {
         if (isModalOpen) {
-            // Optional: Start ringing sound
-            // audioRef.current = new Audio("/sounds/ringtone.mp3");
-            // audioRef.current.loop = true;
-            // audioRef.current.play().catch(() => {});
+            audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3");
+            audioRef.current.loop = true;
+            audioRef.current.play().catch((err) => console.log("Audio play failed:", err));
         } else {
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -39,6 +40,7 @@ export const IncomingCallModal = () => {
         return () => {
             if (audioRef.current) {
                 audioRef.current.pause();
+                audioRef.current = null;
             }
         };
     }, [isModalOpen]);
@@ -60,7 +62,15 @@ export const IncomingCallModal = () => {
         router.push(`/servers/${serverId}/conversations/${callerMemberId}?video=true`);
     };
 
-    const onDecline = () => {
+    const onDecline = async () => {
+        try {
+            await axios.post("/api/socket/call", {
+                conversationId,
+                action: "reject"
+            });
+        } catch (error) {
+            console.log(error);
+        }
         onClose();
     };
 

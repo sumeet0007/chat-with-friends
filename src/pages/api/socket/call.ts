@@ -62,6 +62,25 @@ export default async function handler(
         const notificationKey = `user:${otherMember.profileId}:calls`;
 
         if (action === "invite") {
+            const message = await db.directMessage.create({
+                data: {
+                    content: "☎️ Started a call",
+                    conversationId: conversationId as string,
+                    memberId: currentMember.id,
+                },
+                include: {
+                    member: {
+                        include: {
+                            profile: true,
+                        }
+                    }
+                }
+            });
+
+            const channelKey = `chat:${conversationId}:messages`;
+
+            res?.socket?.server?.io?.emit(channelKey, message);
+
             res?.socket?.server?.io?.emit(notificationKey, {
                 type: "incoming_call",
                 conversationId,
@@ -79,12 +98,50 @@ export default async function handler(
                 conversationId,
             });
         } else if (action === "reject") {
+            const message = await db.directMessage.create({
+                data: {
+                    content: "☎️ Missed call",
+                    conversationId: conversationId as string,
+                    memberId: profile.id === conversation.memberOne.profile.id ? conversation.memberOne.id : conversation.memberTwo.id,
+                },
+                include: {
+                    member: {
+                        include: {
+                            profile: true,
+                        }
+                    }
+                }
+            });
+
+            const channelKey = `chat:${conversationId}:messages`;
+            res?.socket?.server?.io?.emit(channelKey, message);
+
             // Signal back to caller that call was rejected
             const callerNotificationKey = `user:${profile.id === conversation.memberOne.profileId ? conversation.memberTwo.profileId : conversation.memberOne.profileId}:calls`;
              res?.socket?.server?.io?.emit(callerNotificationKey, {
                 type: "call_rejected",
                 conversationId,
             });
+        } else if (action === "end") {
+            const { duration } = req.body;
+            
+            const message = await db.directMessage.create({
+                data: {
+                    content: `⏹️ Call ended - duration: ${duration}`,
+                    conversationId: conversationId as string,
+                    memberId: profile.id === conversation.memberOne.profile.id ? conversation.memberOne.id : conversation.memberTwo.id,
+                },
+                include: {
+                    member: {
+                        include: {
+                            profile: true,
+                        }
+                    }
+                }
+            });
+
+            const channelKey = `chat:${conversationId}:messages`;
+            res?.socket?.server?.io?.emit(channelKey, message);
         }
 
         return res.status(200).json({ success: true });
