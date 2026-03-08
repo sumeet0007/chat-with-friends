@@ -47,19 +47,15 @@ export async function POST(
             return new NextResponse("Chat ID missing", { status: 400 });
         }
 
-        const theme = await db.userChatTheme.upsert({
+        const theme = await (db as any).chatTheme.upsert({
             where: {
-                profileId_chatId: {
-                    profileId: profile.id,
-                    chatId: chatId,
-                }
+                chatId: chatId,
             },
             update: {
                 backgroundImage,
                 backgroundColor,
             },
             create: {
-                profileId: profile.id,
                 chatId,
                 backgroundImage,
                 backgroundColor,
