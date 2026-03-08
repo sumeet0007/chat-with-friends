@@ -124,6 +124,32 @@ export default async function handler(
             }
         });
 
+        // Trigger Web Push Notification
+        try {
+            const memberProfileIds = server.members
+                .map(m => m.profileId)
+                .filter(id => id !== profile.id);
+
+            const pushSubscriptions = await db.pushSubscription.findMany({
+                where: { profileId: { in: memberProfileIds } }
+            });
+
+            const sendPushPromises = pushSubscriptions.map((sub: any) => {
+                const payload = JSON.stringify({
+                    title: `New message in ${server.name} #${channel.name}`,
+                    body: `${profile.name}: ${content.length > 50 ? content.substring(0, 50) + "..." : content}`,
+                    url: `/servers/${serverId}/channels/${channelId}`
+                });
+                return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
+                    return sendWebPushNotification(sub as any, payload);
+                });
+            });
+
+            await Promise.all(sendPushPromises);
+        } catch (pushError) {
+            console.error("Failed to send web push", pushError);
+        }
+
         return res.status(200).json(message);
     } catch (error) {
         console.log("[MESSAGES_POST]", error);

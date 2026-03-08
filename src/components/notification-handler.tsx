@@ -1,16 +1,22 @@
 "use client";
 
 import { useNotifications, AppNotification } from "@/hooks/use-notification-store";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { X, MessageSquare, UserPlus, CheckCircle, Hash } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export const NotificationHandler = () => {
     const { notifications, removeNotification, requestBrowserPermission } = useNotifications();
+    const { subscribeToPush } = usePushNotifications();
 
     useEffect(() => {
-        requestBrowserPermission();
-    }, []);
+        requestBrowserPermission().then(() => {
+            if (Notification.permission === "granted") {
+                subscribeToPush();
+            }
+        });
+    }, [requestBrowserPermission, subscribeToPush]);
 
     if (notifications.length === 0) return null;
 

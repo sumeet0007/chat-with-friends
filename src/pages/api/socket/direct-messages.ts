@@ -118,6 +118,28 @@ export default async function handler(
             content: content.length > 50 ? content.substring(0, 50) + "..." : content
         });
 
+        // Trigger Web Push Notification
+        try {
+            const pushSubscriptions = await db.pushSubscription.findMany({
+                where: { profileId: otherMember.profileId }
+            });
+
+            const sendPushPromises = pushSubscriptions.map((sub: any) => {
+                const payload = JSON.stringify({
+                    title: `New message from ${profile.name}`,
+                    body: content.length > 50 ? content.substring(0, 50) + "..." : content,
+                    url: `/friends/conversations/${otherMember.id}`
+                });
+                return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
+                    return sendWebPushNotification(sub as any, payload);
+                });
+            });
+
+            await Promise.all(sendPushPromises);
+        } catch (pushError) {
+            console.error("Failed to send web push", pushError);
+        }
+
         return res.status(200).json(message);
     } catch (error) {
         console.log("[DIRECT_MESSAGES_POST]", error);

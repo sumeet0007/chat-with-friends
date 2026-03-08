@@ -21,6 +21,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Pulse | Next-Gen Communications",
   description: "A futuristic communications platform",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
