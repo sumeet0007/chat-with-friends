@@ -48,6 +48,7 @@ interface ChatItemProps {
             profile: Profile;
         };
     } | null;
+    hasTheme?: boolean;
 };
 
 const roleIconMap = {
@@ -68,7 +69,8 @@ export const ChatItem = ({
     socketUrl,
     socketQuery,
     replyToId,
-    replyTo
+    replyTo,
+    hasTheme
 }: ChatItemProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const { onOpen } = useModal();
@@ -158,8 +160,14 @@ export const ChatItem = ({
     }
 
     return (
-        <div className="relative group flex items-center hover:bg-black/5 p-4 transition w-full">
-            <div className="group flex gap-x-2 items-start w-full">
+        <div className={cn(
+            "relative group flex items-center transition w-full",
+            hasTheme ? "px-4 py-2" : "hover:bg-black/5 p-4"
+        )}>
+            <div className={cn(
+                "group flex gap-x-2 items-start w-full transition-all duration-200",
+                hasTheme && "bg-white/40 dark:bg-black/30 backdrop-blur-md p-3 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm hover:shadow-md hover:bg-white/50 dark:hover:bg-black/40"
+            )}>
                 <div onClick={onMemberClick} className="cursor-pointer hover:drop-shadow-md transition">
                     <UserAvatar src={member.profile.imageUrl} />
                 </div>
@@ -183,7 +191,10 @@ export const ChatItem = ({
                                 {roleIconMap[member.role]}
                             </ActionTooltip>
                         </div>
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className={cn(
+                            "text-xs text-zinc-500 dark:text-zinc-400",
+                            hasTheme && "text-zinc-600 dark:text-zinc-400 font-medium"
+                        )}>
                             {timestamp}
                         </span>
                     </div>
@@ -217,11 +228,12 @@ export const ChatItem = ({
                     {!fileUrl && !isEditing && (
                         <p className={cn(
                             "text-sm text-zinc-600 dark:text-zinc-300",
+                            hasTheme && "text-zinc-800 dark:text-zinc-200 leading-relaxed",
                             deleted && "italic text-zinc-500 dark:text-zinc-400 text-xs mt-1"
                         )}>
                             {content}
                             {isUpdated && !deleted && (
-                                <span className="text-[10px] mx-2 text-zinc-500 dark:text-zinc-400">
+                                <span className="text-[10px] mx-2 text-zinc-500 dark:text-zinc-400 opacity-70">
                                     (edited)
                                 </span>
                             )}

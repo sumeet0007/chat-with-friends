@@ -196,6 +196,7 @@ export const ChatMessages = ({
                                     isUpdated={message.updatedAt !== message.createdAt}
                                     socketUrl={socketUrl}
                                     socketQuery={socketQuery}
+                                    hasTheme={!!(theme?.backgroundColor || theme?.backgroundImage)}
                                 />
                             ))}
                         </Fragment>
