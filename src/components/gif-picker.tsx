@@ -88,7 +88,7 @@ export const GifPicker = ({
             <PopoverContent
                 side="top"
                 sideOffset={40}
-                className="bg-white dark:bg-[#2B2D31] border-none shadow-2xl w-[400px] p-0 overflow-hidden rounded-xl animate-in fade-in zoom-in-95 duration-200"
+                className="bg-white dark:bg-[#2B2D31] border-none shadow-2xl w-screen md:w-[450px] p-0 overflow-hidden rounded-t-[2.5rem] md:rounded-xl animate-in fade-in zoom-in-95 duration-200 z-[100]"
             >
                 <div className="p-4 bg-[#F2F3F5] dark:bg-[#1E1F22] border-b border-zinc-200 dark:border-zinc-800 flex flex-col gap-y-3">
                     <div className="flex bg-zinc-200/50 dark:bg-black/20 rounded-lg p-1">
@@ -115,20 +115,20 @@ export const GifPicker = ({
                             Stickers
                         </button>
                     </div>
-                    <div className="relative group items-center">
-                        <div className="absolute left-3 inset-y-0 flex items-center pointer-events-none">
+                    <div className="relative group flex items-center">
+                        <div className="absolute left-3 flex items-center pointer-events-none">
                             <Search className="h-4 w-4 text-zinc-500 group-focus-within:text-indigo-500 transition-colors" />
                         </div>
                         <Input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder={`Search GIPHY ${type}...`}
-                            className="pl-9 pr-9 bg-white dark:bg-[#383A40] border-none focus-visible:ring-1 focus-visible:ring-indigo-500 text-sm h-10 rounded-md placeholder:text-zinc-500 shadow-inner w-full"
+                            className="pl-9 pr-9 bg-white dark:bg-[#383A40] border-none focus-visible:ring-1 focus-visible:ring-indigo-500 text-sm h-11 rounded-md placeholder:text-zinc-500 shadow-inner w-full"
                         />
                         {search && (
                             <button 
                                 onClick={handleClearSearch}
-                                className="absolute right-3 inset-y-0 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition"
+                                className="absolute right-3 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition"
                             >
                                 <X className="h-4 w-4" />
                             </button>
@@ -136,7 +136,7 @@ export const GifPicker = ({
                     </div>
                 </div>
 
-                <div className="h-[400px] overflow-y-auto px-4 py-4 custom-scrollbar bg-white dark:bg-[#2B2D31]">
+                <div className="h-[450px] max-h-[70vh] overflow-y-auto px-4 py-4 custom-scrollbar bg-white dark:bg-[#2B2D31]">
                     {isLoading ? (
                         <div className="h-full flex flex-col items-center justify-center gap-y-3 opacity-60">
                             <div className="relative">

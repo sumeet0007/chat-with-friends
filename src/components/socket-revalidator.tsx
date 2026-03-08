@@ -9,11 +9,14 @@ interface SocketRevalidatorProps {
     profileId: string;
 }
 
+import { useParams } from "next/navigation";
+
 export const SocketRevalidator = ({
     profileId
 }: SocketRevalidatorProps) => {
     const { socket } = useSocket();
     const router = useRouter();
+    const params = useParams();
     const { addNotification } = useNotifications();
 
     useEffect(() => {
@@ -51,22 +54,42 @@ export const SocketRevalidator = ({
         });
 
         socket.on(notificationsKey, (data: any) => {
+            let shouldRefresh = true;
+            let shouldNotify = true;
+
             if (data.type === "message") {
-                addNotification({
-                    type: "message",
-                    title: `Message from ${data.senderName}`,
-                    description: data.content,
-                    actionUrl: `/friends/conversations/${data.conversationId}`
-                });
+                if (params?.conversationId === data.conversationId) {
+                    shouldRefresh = false;
+                    shouldNotify = false;
+                }
+
+                if (shouldNotify) {
+                    addNotification({
+                        type: "message",
+                        title: `Message from ${data.senderName}`,
+                        description: data.content,
+                        actionUrl: `/friends/conversations/${data.conversationId}`
+                    });
+                }
             } else if (data.type === "channel_message") {
-                addNotification({
-                    type: "channel_message",
-                    title: `#${data.channelName} in ${data.serverName}`,
-                    description: `${data.senderName}: ${data.content}`,
-                    actionUrl: `/servers/${data.serverId}/channels/${data.channelId}`
-                });
+                if (params?.channelId === data.channelId) {
+                    shouldRefresh = false;
+                    shouldNotify = false;
+                }
+
+                if (shouldNotify) {
+                    addNotification({
+                        type: "channel_message",
+                        title: `#${data.channelName} in ${data.serverName}`,
+                        description: `${data.senderName}: ${data.content}`,
+                        actionUrl: `/servers/${data.serverId}/channels/${data.channelId}`
+                    });
+                }
             }
-            router.refresh(); // Refresh to update unread counts/dots in sidebars
+
+            if (shouldRefresh) {
+                router.refresh(); // Refresh to update unread counts/dots in sidebars
+            }
         });
 
         return () => {
@@ -74,7 +97,7 @@ export const SocketRevalidator = ({
             socket.off(requestsKey);
             socket.off(notificationsKey);
         };
-    }, [socket, profileId, router, addNotification]);
+    }, [socket, profileId, router, addNotification, params]);
 
     return null;
 }

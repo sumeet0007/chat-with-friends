@@ -55,8 +55,19 @@ export const useChatSocket = ({
                     return {
                         pages: [{
                             items: [message],
-                        }]
+                        }],
+                        pageParams: [undefined]
                     };
+                }
+
+                // Deduplication: Avoid adding the same message twice if the socket event 
+                // and the API response arrive in close proximity.
+                const isDuplicate = oldData.pages.some((page: any) =>
+                    page.items.some((item: any) => item.id === message.id)
+                );
+
+                if (isDuplicate) {
+                    return oldData;
                 }
 
                 const newData = [...oldData.pages];

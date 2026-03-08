@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
 import { Edit, FileIcon, MessageSquare, ShieldAlert, ShieldCheck, Trash, Palette } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, memo } from "react";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { ActionTooltip } from "@/components/action-tooltip";
@@ -57,7 +57,7 @@ const roleIconMap = {
     "ADMIN": <ShieldAlert className="h-4 w-4 ml-2 text-rose-500" />,
 }
 
-export const ChatItem = ({
+export const ChatItem = memo(({
     id,
     content,
     member,
@@ -309,8 +309,7 @@ export const ChatItem = ({
                         </ActionTooltip>
                     )}
                 </div>
-            )
-            }
-        </div >
+            )}
+        </div>
     )
-}
+});
