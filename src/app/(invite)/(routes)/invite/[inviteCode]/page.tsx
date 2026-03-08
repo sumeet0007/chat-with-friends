@@ -1,7 +1,6 @@
-
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 
 interface InviteCodePageProps {
@@ -13,10 +12,32 @@ interface InviteCodePageProps {
 const InviteCodePage = async ({
   params
 }: InviteCodePageProps) => {
-  const profile = await currentProfile();
+  const { userId, redirectToSignIn } = await auth();
+
+  if (!userId) {
+    return redirectToSignIn();
+  }
+
+  const user = await currentUser();
+  if (!user) {
+    return redirectToSignIn();
+  }
+
+  let profile = await db.profile.findUnique({
+    where: {
+      userId: user.id
+    }
+  });
 
   if (!profile) {
-    return redirect("/sign-in");
+    profile = await db.profile.create({
+      data: {
+        userId: user.id,
+        name: `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "User",
+        imageUrl: user.imageUrl,
+        email: user.emailAddresses[0].emailAddress
+      }
+    });
   }
 
   const { inviteCode } = await params;
