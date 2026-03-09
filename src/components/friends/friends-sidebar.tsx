@@ -65,7 +65,7 @@ export const FriendsSidebar = async () => {
                 DIRECT MESSAGES
             </div>
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 w-full min-h-[0px]">
                 <div className="space-y-[2px]">
                     {conversations.map((conversation) => {
                         const memberOneIsMe = conversation.memberOne.profileId === profile.id;

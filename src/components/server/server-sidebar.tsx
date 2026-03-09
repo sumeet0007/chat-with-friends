@@ -104,7 +104,7 @@ export const ServerSidebar = async ({
                 server={server}
                 role={role}
             />
-            <ScrollArea className="flex-1 px-3">
+            <ScrollArea className="flex-1 w-full min-h-[0px] px-3">
                 <div className="mt-2">
                     <ServerSearch
                         data={[
