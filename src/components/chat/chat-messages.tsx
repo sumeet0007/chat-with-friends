@@ -3,12 +3,13 @@
 import { format } from "date-fns";
 import { DirectMessage, Member, Message, Profile } from "@prisma/client";
 import { Loader2, ServerCrash, ArrowDown } from "lucide-react";
-import { Fragment, useRef, ElementRef } from "react";
+import { Fragment, useRef, ElementRef, memo, useState, useEffect } from "react";
+import axios from "axios";
 
 import { useChatQuery } from "@/hooks/use-chat-query";
 import { useChatSocket } from "@/hooks/use-chat-socket";
 import { useSocket } from "@/components/providers/socket-provider";
-
+import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { ChatWelcome } from "./chat-welcome";
 import { ChatItem } from "./chat-item";
 
@@ -32,14 +33,23 @@ type MessageWithMemberWithProfile = (Message | DirectMessage) & {
         profile: Profile
     },
     replyToId?: string | null;
-    replyTo?: any;
+    replyTo?: (Message | DirectMessage) & {
+        member: Member & {
+            profile: Profile;
+        };
+    } | null;
 }
 
-import { useChatScroll } from "@/hooks/use-chat-scroll";
-import { useState, useEffect } from "react";
-import axios from "axios";
+interface ChatTheme {
+    id: string;
+    chatId: string;
+    backgroundImage: string | null;
+    backgroundColor: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
 
-export const ChatMessages = ({
+export const ChatMessages = memo(({
     name,
     member,
     chatId,
@@ -58,14 +68,14 @@ export const ChatMessages = ({
     const chatRef = useRef<ElementRef<"div">>(null);
     const bottomRef = useRef<ElementRef<"div">>(null);
 
-    const [theme, setTheme] = useState<any>(null);
+    const [theme, setTheme] = useState<ChatTheme | null>(null);
 
     const { socket } = useSocket();
 
     useEffect(() => {
         const fetchTheme = async () => {
             try {
-                const response = await axios.get(`/api/chat-theme?chatId=${paramValue}`);
+                const response = await axios.get<ChatTheme>(`/api/chat-theme?chatId=${paramValue}`);
                 setTheme(response.data);
             } catch (error) {
                 console.error(error);
@@ -75,12 +85,14 @@ export const ChatMessages = ({
 
         if (socket) {
             const themeKey = `chat:${paramValue}:theme:update`;
-            socket.on(themeKey, (updatedTheme: any) => {
+            const handleThemeUpdate = (updatedTheme: ChatTheme) => {
                 setTheme(updatedTheme);
-            });
+            };
+            
+            socket.on(themeKey, handleThemeUpdate);
 
             return () => {
-                socket.off(themeKey);
+                socket.off(themeKey, handleThemeUpdate);
             }
         }
     }, [paramValue, socket]);
@@ -215,4 +227,4 @@ export const ChatMessages = ({
             )}
         </div>
     );
-}
+});

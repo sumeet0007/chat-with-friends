@@ -4,6 +4,56 @@ import { MemberRole } from "@prisma/client";
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 
+export async function GET(
+    req: Request,
+    { params }: { params: Promise<{ channelId: string }> }
+) {
+    try {
+        const profile = await currentProfile();
+        const { channelId } = await params;
+        const { searchParams } = new URL(req.url);
+        const serverId = searchParams.get("serverId");
+
+        if (!profile) {
+            return new NextResponse("Unauthorized", { status: 401 });
+        }
+
+        if (!serverId) {
+            return new NextResponse("Server ID missing", { status: 400 });
+        }
+
+        const channel = await db.channel.findFirst({
+            where: {
+                id: channelId,
+                serverId,
+            },
+        });
+
+        if (!channel) {
+            return new NextResponse("Channel not found", { status: 404 });
+        }
+
+        const member = await db.member.findFirst({
+            where: {
+                serverId,
+                profileId: profile.id,
+            }
+        });
+
+        if (!member) {
+            return new NextResponse("Member not found", { status: 404 });
+        }
+
+        return NextResponse.json({
+            channel,
+            member
+        });
+    } catch (error) {
+        console.log("[CHANNEL_ID_GET]", error);
+        return new NextResponse("Internal Error", { status: 500 });
+    }
+}
+
 export async function DELETE(
     req: Request,
     { params }: { params: Promise<{ channelId: string }> }

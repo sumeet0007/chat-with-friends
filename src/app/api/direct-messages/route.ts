@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { DirectMessage } from "@prisma/client";
 
 import { currentProfile } from "@/lib/current-profile";
-import { db } from "@/lib/db";
-
-const MESSAGES_BATCH = 10;
+import { getDirectMessages } from "@/lib/services/message-service";
+import { messageRateLimiter } from "@/lib/rate-limit";
 
 export async function GET(
     req: Request
@@ -24,76 +22,20 @@ export async function GET(
             return new NextResponse("Conversation ID missing", { status: 400 });
         }
 
-        let messages: DirectMessage[] = [];
-
-        if (cursor) {
-            messages = await db.directMessage.findMany({
-                take: MESSAGES_BATCH,
-                skip: 1,
-                cursor: {
-                    id: cursor,
-                },
-                where: {
-                    conversationId,
-                },
-                include: {
-                    member: {
-                        include: {
-                            profile: true,
-                        }
-                    },
-                    replyTo: {
-                        include: {
-                            member: {
-                                include: {
-                                    profile: true,
-                                }
-                            }
-                        }
-                    }
-                },
-                orderBy: {
-                    createdAt: "desc",
-                }
-            })
-        } else {
-            messages = await db.directMessage.findMany({
-                take: MESSAGES_BATCH,
-                where: {
-                    conversationId,
-                },
-                include: {
-                    member: {
-                        include: {
-                            profile: true,
-                        }
-                    },
-                    replyTo: {
-                        include: {
-                            member: {
-                                include: {
-                                    profile: true,
-                                }
-                            }
-                        }
-                    }
-                },
-                orderBy: {
-                    createdAt: "desc",
+        // Rate limiting check
+        const rateLimit = messageRateLimiter.checkLimit(`dm:get:${profile.id}`);
+        if (!rateLimit.success) {
+            return new NextResponse(rateLimit.message, { 
+                status: 429,
+                headers: {
+                    "X-RateLimit-Reset": rateLimit.resetTime.toString(),
                 }
             });
         }
 
-        let nextCursor = null;
+        const messages = await getDirectMessages(conversationId, cursor);
 
-        if (messages.length === MESSAGES_BATCH) {
-            nextCursor = messages[MESSAGES_BATCH - 1].id;
-        }
-
-        return NextResponse.json({
-            items: messages,
-            nextCursor
-        });
+        return NextResponse.json(messages);
     } catch (error) {
         console.log("[DIRECT_MESSAGES_GET]", error);
         return new NextResponse("Internal Error", { status: 500 });

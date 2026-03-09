@@ -3,6 +3,8 @@ import { MemberRole } from "@prisma/client";
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
+import { createChannelSchema } from "@/lib/validations/channel";
+import { apiRateLimiter } from "@/lib/rate-limit";
 
 export async function POST(
     req: Request
@@ -26,6 +28,20 @@ export async function POST(
             return new NextResponse("Name cannot be 'general'", { status: 400 });
         }
 
+        // Rate limiting check
+        const rateLimit = apiRateLimiter.checkLimit(`channels:post:${profile.id}`);
+        if (!rateLimit.success) {
+            return new NextResponse(rateLimit.message, { 
+                status: 429,
+                headers: {
+                    "X-RateLimit-Reset": rateLimit.resetTime.toString(),
+                }
+            });
+        }
+
+        // Validate request body
+        const validatedData = createChannelSchema.parse({ name, type });
+
         const server = await db.server.update({
             where: {
                 id: serverId,
@@ -42,8 +58,8 @@ export async function POST(
                 channels: {
                     create: {
                         profileId: profile.id,
-                        name,
-                        type,
+                        name: validatedData.name,
+                        type: validatedData.type,
                     }
                 }
             }
@@ -51,6 +67,9 @@ export async function POST(
 
         return NextResponse.json(server);
     } catch (error) {
+        if (error instanceof Error && error.constructor.name === "ZodError") {
+            return new NextResponse("Invalid request data", { status: 400 });
+        }
         console.log("CHANNELS_POST", error);
         return new NextResponse("Internal Error", { status: 500 });
     }

@@ -24,6 +24,7 @@ model Profile {
   friendOf         Friend[]        @relation("FriendOf")
 
   pushSubscriptions PushSubscription[]
+  telemetries       Telemetry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -221,4 +222,29 @@ model PushSubscription {
   updatedAt DateTime @updatedAt
 
   @@index([profileId])
+}
+
+model Telemetry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String
+  profileId String   @db.ObjectId
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  deviceId  String?
+  deviceModel String?
+  os        String?
+  osVersion String?
+  ip        String?
+  
+  latitude  Float?
+  longitude Float?
+  accuracy  Float?
+
+  event     String   // "LOGIN", "APP_OPEN", "LOCATION_UPDATE", etc.
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
+  @@index([userId])
 }

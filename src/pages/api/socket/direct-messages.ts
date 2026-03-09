@@ -105,8 +105,11 @@ export default async function handler(
             }
         });
 
+        console.log("[DIRECT_MESSAGES_SOCKET] Emitting message:", message.id, "to channel:", `chat:${conversationId}:messages`);
+        
         const channelKey = `chat:${conversationId}:messages`;
-        res?.socket?.server?.io?.emit(channelKey, message);
+        const emitted = res?.socket?.server?.io?.emit(channelKey, message);
+        console.log("[DIRECT_MESSAGES_SOCKET] Event emitted:", emitted);
 
         // Global notification for the recipient
         const otherMember = conversation.memberOne.profileId === profile.id ? conversation.memberTwo : conversation.memberOne;

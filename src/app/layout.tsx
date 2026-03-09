@@ -6,6 +6,7 @@ import { ModalProvider } from "@/components/providers/modal-provider";
 import { NotificationHandler } from "@/components/notification-handler";
 import { SocketProvider } from "@/components/providers/socket-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { ErrorBoundary } from "@/components/providers/error-boundary";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -54,12 +55,14 @@ export default function RootLayout({
             storageKey="pulse-theme"
             themes={["light", "dark", "cyberpunk"]}
           >
-            <SocketProvider>
-              <QueryProvider>
-                <NotificationHandler />
-                {children}
-              </QueryProvider>
-            </SocketProvider>
+            <ErrorBoundary>
+              <SocketProvider>
+                <QueryProvider>
+                  <NotificationHandler />
+                  {children}
+                </QueryProvider>
+              </SocketProvider>
+            </ErrorBoundary>
           </ThemeProvider>
         </body>
       </html>

@@ -12,13 +12,31 @@ export const config = {
 
 const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
     if (!res.socket.server.io) {
+        console.log("[Socket.io] Initializing Socket.io server...");
+        
         const path = "/api/socket/io";
         const httpServer: NetServer = res.socket.server as any;
         const io = new ServerIO(httpServer, {
             path: path,
             addTrailingSlash: false,
+            cors: {
+                origin: '*',
+                methods: ['GET', 'POST']
+            },
+            pingTimeout: 60000,
+            pingInterval: 25000,
         });
+
+        io.on("connection", (socket) => {
+            console.log("[Socket.io] Client connected:", socket.id);
+            
+            socket.on("disconnect", () => {
+                console.log("[Socket.io] Client disconnected:", socket.id);
+            });
+        });
+
         res.socket.server.io = io;
+        console.log("[Socket.io] Socket.io server initialized");
     }
 
     res.end();
