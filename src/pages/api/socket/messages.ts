@@ -141,11 +141,18 @@ export default async function handler(
                     url: `/servers/${serverId}/channels/${channelId}`
                 });
                 return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
-                    return sendWebPushNotification(sub as any, payload);
+                    const formattedSub = {
+                        endpoint: sub.endpoint,
+                        keys: {
+                            auth: sub.auth,
+                            p256dh: sub.p256dh
+                        }
+                    };
+                    return sendWebPushNotification(formattedSub as any, payload);
                 });
             });
 
-            await Promise.all(sendPushPromises);
+            Promise.all(sendPushPromises).catch(err => console.error("Push Error", err));
         } catch (pushError) {
             console.error("Failed to send web push", pushError);
         }

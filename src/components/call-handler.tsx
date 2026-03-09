@@ -12,7 +12,6 @@ export const CallHandler = ({
     profileId
 }: CallHandlerProps) => {
     const { socket } = useSocket();
-    const { onOpen, onClose, type, isOpen } = useModal();
 
     useEffect(() => {
         if (!socket || !profileId) return;
@@ -21,10 +20,11 @@ export const CallHandler = ({
 
         socket.on(callsKey, (data: any) => {
             if (data.type === "incoming_call") {
-                onOpen("incomingCall", { query: data });
+                useModal.getState().onOpen("incomingCall", { query: data });
             } else if (data.type === "call_cancelled") {
-                if (type === "incomingCall" && isOpen) {
-                    onClose();
+                const state = useModal.getState();
+                if (state.type === "incomingCall" && state.isOpen) {
+                    state.onClose();
                 }
             }
         });
@@ -32,7 +32,7 @@ export const CallHandler = ({
         return () => {
             socket.off(callsKey);
         };
-    }, [socket, profileId, onOpen, onClose, type, isOpen]);
+    }, [socket, profileId]);
 
     return null;
 }
