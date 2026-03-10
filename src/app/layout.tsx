@@ -47,6 +47,7 @@ export default function RootLayout({
       <html lang="en" className="h-full" suppressHydrationWarning>
         <body
           className={`${plusJakarta.className} ${spaceGrotesk.variable} ${plusJakarta.variable} bg-discord-bg text-discord-text antialiased h-full`}
+          suppressHydrationWarning
         >
           <ThemeProvider
             attribute="class"
