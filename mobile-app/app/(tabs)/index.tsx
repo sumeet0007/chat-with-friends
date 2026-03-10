@@ -7,6 +7,8 @@ import { MessageSquare, Users, UserPlus, Search, MoreVertical, LogOut, Check, X 
 import { useRouter } from 'expo-router';
 import { AddFriendModal } from '@/components/AddFriendModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSocket } from '@/hooks/use-socket';
+import { useEffect } from 'react';
 
 interface Profile {
   id: string;
@@ -39,9 +41,23 @@ export default function DMSTabScreen() {
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
+  const { socket } = useSocket();
 
-  console.log(insets, 'insets');
-  console.log(insets.bottom, 'insets.bottom');
+  useEffect(() => {
+    if (!socket || !user?.id) return;
+
+    // Listen for any direct message or notification to refresh the list
+    const notificationKey = `user:${user.id}:notifications`;
+    
+    socket.on(notificationKey, (data: any) => {
+        console.log("[DMSTab] Notification received:", data.type);
+        refetch(); // Reload the friends/DMs list
+    });
+
+    return () => {
+        socket.off(notificationKey);
+    };
+  }, [socket, user?.id]);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['friends-data'],

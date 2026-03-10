@@ -8,8 +8,10 @@ import { format } from 'date-fns';
 import { useSocket } from '@/hooks/use-socket';
 import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUser } from '@clerk/clerk-expo';
 
 export default function ChannelScreen() {
+  const { user } = useUser();
   const { channelId, serverId } = useLocalSearchParams();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -25,6 +27,7 @@ export default function ChannelScreen() {
       });
       return res.data;
     },
+    staleTime: 1000 * 60 * 5, // Keep metadata fresh for 5 mins
   });
 
   const {
@@ -47,8 +50,9 @@ export default function ChannelScreen() {
     initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
     enabled: !!channelId,
+    staleTime: 5000, 
     // Fallback polling when socket is disconnected
-    refetchInterval: isConnected ? false : 1000,
+    refetchInterval: isConnected ? false : 10000,
   });
 
   useEffect(() => {
@@ -57,6 +61,7 @@ export default function ChannelScreen() {
     const chatKey = `chat:${channelId}:messages`;
 
     socket.on(chatKey, (message: any) => {
+      console.log(`[Socket] Received message via ${chatKey}:`, message.id);
       queryClient.setQueryData(['messages', channelId], (oldData: any) => {
         if (!oldData || !oldData.pages || oldData.pages.length === 0) {
           return {
@@ -65,23 +70,41 @@ export default function ChannelScreen() {
           };
         }
 
-        // Avoid inserting duplicates (e.g. optimistic update + socket echo)
+        // Avoid inserting duplicates (fully matched ID)
         const exists = oldData.pages.some((page: any) =>
           page.items.some((item: any) => item.id === message.id),
         );
-        if (exists) {
-          return oldData;
-        }
+        if (exists) return oldData;
 
-        const newData = [...oldData.pages];
-        newData[0] = {
-          ...newData[0],
-          items: [message, ...newData[0].items],
+        // CHECK FOR MATCHING OPTIMISTIC (TEMP) MESSAGE
+        // We match by content + sender to "claim" the optimistic slot before the API returns
+        let foundOptimistic = false;
+        const newData = oldData.pages.map((page: any, index: number) => {
+            if (index === 0) { // Usually optimistic is on the first page
+                const items = page.items.map((item: any) => {
+                    if (item.id.toString().startsWith('temp-') && item.content === message.content) {
+                        foundOptimistic = true;
+                        return message; // Swap it!
+                    }
+                    return item;
+                });
+                return { ...page, items };
+            }
+            return page;
+        });
+
+        if (foundOptimistic) return { ...oldData, pages: newData };
+
+        // Fallback: regular insert
+        const updatedPages = [...oldData.pages];
+        updatedPages[0] = {
+          ...updatedPages[0],
+          items: [message, ...updatedPages[0].items],
         };
 
         return {
           ...oldData,
-          pages: newData,
+          pages: updatedPages,
         };
       });
     });
@@ -93,47 +116,81 @@ export default function ChannelScreen() {
 
   const onSend = async () => {
     if (!content.trim() || !channelId) return;
+    
+    const userContent = content.trim();
+    setContent('');
+
+    // Optimistic Update
+    const optimisticId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: optimisticId,
+      content: userContent,
+      createdAt: new Date().toISOString(),
+      member: {
+        profile: {
+          name: user?.firstName || "You",
+          imageUrl: user?.imageUrl || "https://github.com/shadcn.png" 
+        }
+      }
+    };
+
+    // Update Cache Optimistically
+    queryClient.setQueryData(['messages', channelId], (oldData: any) => {
+        if (!oldData || !oldData.pages) return oldData;
+        const newPages = [...oldData.pages];
+        newPages[0] = {
+            ...newPages[0],
+            items: [optimisticMessage, ...newPages[0].items],
+        };
+        return { ...oldData, pages: newPages };
+    });
+
     try {
       const res = await api.post(
         `/api/socket/messages`,
         {
-          content,
-          serverId,
-          channelId,
+          content: userContent,
         },
         {
           params: {
             serverId,
             channelId,
-          },
-        },
+          }
+        }
       );
 
       const newMessage = res.data;
 
+      // Replace optimistic message with real message (if socket didn't already swap it)
       queryClient.setQueryData(['messages', channelId], (oldData: any) => {
-        if (!oldData || !oldData.pages || oldData.pages.length === 0) {
-          return {
-            pages: [{ items: [newMessage], nextCursor: null }],
-            pageParams: [null],
-          };
+        if (!oldData || !oldData.pages) return oldData;
+        
+        // Check if the message was already added/swapped by the socket
+        const alreadyHasReal = oldData.pages.some((page: any) => 
+            page.items.some((item: any) => item.id === newMessage.id)
+        );
+
+        if (alreadyHasReal) {
+            // Just clean up the optimistic one
+            const newPages = oldData.pages.map((page: any) => ({
+                ...page,
+                items: page.items.filter((item: any) => item.id !== optimisticId)
+            }));
+            return { ...oldData, pages: newPages };
         }
 
-        const newPages = [...oldData.pages];
-        newPages[0] = {
-          ...newPages[0],
-          items: [newMessage, ...newPages[0].items],
-        };
-
-        return {
-          ...oldData,
-          pages: newPages,
-        };
+        const newPages = oldData.pages.map((page: any) => ({
+            ...page,
+            items: page.items.map((item: any) => 
+                item.id === optimisticId ? newMessage : item
+            )
+        }));
+        return { ...oldData, pages: newPages };
       });
-
-      setContent('');
     } catch (error) {
       console.error(error);
+      // Rollback on error
+      queryClient.invalidateQueries({ queryKey: ['messages', channelId] });
     }
   };
 
@@ -166,23 +223,17 @@ export default function ChannelScreen() {
       <FlatList
         data={messages}
         inverted
-        keyExtractor={(item, index) => `${item.id}:${index}`}
+        keyExtractor={(item) => item.id}
+        initialNumToRender={15}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        getItemLayout={(data, index) => (
+          {length: 70, offset: 70 * index, index}
+        )}
+        removeClippedSubviews={Platform.OS === 'android'}
         onEndReached={() => hasNextPage && fetchNextPage()}
         onEndReachedThreshold={0.5}
-        renderItem={({ item }) => (
-          <View className="px-4 py-2 flex-row">
-            <Image source={{ uri: item.member.profile.imageUrl }} className="w-10 h-10 rounded-full" />
-            <View className="ml-3 flex-1">
-              <View className="flex-row items-baseline">
-                <Text className="text-white font-bold text-sm">{item.member.profile.name}</Text>
-                <Text className="text-[#B5BAC1] text-[10px] ml-2">
-                    {format(new Date(item.createdAt), 'HH:mm')}
-                </Text>
-              </View>
-              <Text className="text-[#DBDEE1] text-sm mt-1">{item.content}</Text>
-            </View>
-          </View>
-        )}
+        renderItem={({ item }) => <MessageItem item={item} />}
         ListFooterComponent={isFetchingNextPage ? <Text className="text-center text-[#B5BAC1] py-2">Loading more...</Text> : null}
       />
 
@@ -218,3 +269,20 @@ export default function ChannelScreen() {
     </SafeAreaView>
   );
 }
+
+const MessageItem = React.memo(({ item }: { item: any }) => {
+    return (
+        <View className="px-4 py-2 flex-row" style={{ height: 70 }}>
+            <Image source={{ uri: item.member.profile.imageUrl }} className="w-10 h-10 rounded-full" style={{ width: 40, height: 40, borderRadius: 20 }} />
+            <View className="ml-3 flex-1">
+            <View className="flex-row items-baseline">
+                <Text className="text-white font-bold text-sm">{item.member.profile.name}</Text>
+                <Text className="text-[#B5BAC1] text-[10px] ml-2">
+                    {format(new Date(item.createdAt), 'HH:mm')}
+                </Text>
+            </View>
+            <Text className="text-[#DBDEE1] text-sm mt-0.5" numberOfLines={2}>{item.content}</Text>
+            </View>
+        </View>
+    );
+});

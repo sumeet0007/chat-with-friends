@@ -108,12 +108,13 @@ export default async function handler(
         console.log("[DIRECT_MESSAGES_SOCKET] Emitting message:", message.id, "to channel:", `chat:${conversationId}:messages`);
         
         const channelKey = `chat:${conversationId}:messages`;
+        console.log(`[Socket] Emitting DM to key: ${channelKey}`);
         const emitted = res?.socket?.server?.io?.emit(channelKey, message);
-        console.log("[DIRECT_MESSAGES_SOCKET] Event emitted:", emitted);
+        console.log(`[Socket] Emitted success: ${!!emitted}`);
 
-        // Global notification for the recipient
+        // Global notification for the recipient (using Clerk userId for the socket key)
         const otherMember = conversation.memberOne.profileId === profile.id ? conversation.memberTwo : conversation.memberOne;
-        const notificationKey = `user:${otherMember.profileId}:notifications`;
+        const notificationKey = `user:${otherMember.profile.userId}:notifications`;
         res?.socket?.server?.io?.emit(notificationKey, {
             type: "message",
             conversationId,
@@ -149,6 +150,16 @@ export default async function handler(
         } catch (pushError) {
             console.error("Failed to send web push", pushError);
         }
+
+        // Trigger Expo Push Notification
+        import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
+            sendExpoPushNotification(
+                otherMember.profileId,
+                profile.name,
+                content.length > 50 ? content.substring(0, 50) + "..." : content,
+                { url: `/friends/conversations/${otherMember.id}` }
+            );
+        }).catch(err => console.error("Expo Push Error", err));
 
         return res.status(200).json(message);
     } catch (error) {

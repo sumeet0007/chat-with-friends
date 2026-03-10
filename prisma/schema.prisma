@@ -24,6 +24,7 @@ model Profile {
   friendOf         Friend[]        @relation("FriendOf")
 
   pushSubscriptions PushSubscription[]
+  expoPushTokens   ExpoPushToken[]
   telemetries       Telemetry[]
 
   createdAt DateTime @default(now())
@@ -247,4 +248,16 @@ model Telemetry {
 
   @@index([profileId])
   @@index([userId])
+}
+
+model ExpoPushToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+
+  profileId String   @db.ObjectId
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
 }
