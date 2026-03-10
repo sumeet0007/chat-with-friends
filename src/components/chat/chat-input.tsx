@@ -42,7 +42,7 @@ export const ChatInput = ({
     const { onOpen } = useModal();
     const { reply, setReply } = useReplyStore();
     const { socket } = useSocket();
-    const typingTimeoutRef = useRef<NodeJS.Timeout>();
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -55,7 +55,10 @@ export const ChatInput = ({
 
     useEffect(() => {
         return () => {
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
+            }
         };
     }, []);
 
@@ -63,9 +66,12 @@ export const ChatInput = ({
         if (!socket) return;
         const chatId = query.channelId || query.conversationId;
         socket.emit("typing:start", { chatId, userName: name });
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
         typingTimeoutRef.current = setTimeout(() => {
             socket.emit("typing:stop", { chatId });
+            typingTimeoutRef.current = null;
         }, 1000);
     };
 
@@ -73,6 +79,7 @@ export const ChatInput = ({
         try {
             if (socket && typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
                 socket.emit("typing:stop", { chatId: query.channelId || query.conversationId });
             }
             const url = qs.stringifyUrl({
