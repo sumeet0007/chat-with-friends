@@ -69,6 +69,7 @@ export const ChatMessages = memo(({
     const bottomRef = useRef<ElementRef<"div">>(null);
 
     const [theme, setTheme] = useState<ChatTheme | null>(null);
+    const [typingUser, setTypingUser] = useState<string | null>(null);
 
     const { socket } = useSocket();
 
@@ -96,6 +97,16 @@ export const ChatMessages = memo(({
             }
         }
     }, [paramValue, socket]);
+
+    useEffect(() => {
+        if (!socket) return;
+        const typingKey = `chat:${chatId}:typing`;
+        const handleTyping = ({ userName, isTyping }: { userName?: string; isTyping: boolean }) => {
+            setTypingUser(isTyping ? userName || null : null);
+        };
+        socket.on(typingKey, handleTyping);
+        return () => { socket.off(typingKey, handleTyping); };
+    }, [socket, chatId]);
 
     const {
         data,
@@ -214,6 +225,11 @@ export const ChatMessages = memo(({
                         </Fragment>
                     ))}
                 </div>
+                {typingUser && (
+                    <div className="px-4 py-2 text-sm text-zinc-500 dark:text-zinc-400 italic">
+                        {typingUser} is typing...
+                    </div>
+                )}
                 <div ref={bottomRef} />
             </div>
 

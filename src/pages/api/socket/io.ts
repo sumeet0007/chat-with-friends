@@ -30,6 +30,14 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         io.on("connection", (socket) => {
             console.log("[Socket.io] Client connected:", socket.id);
             
+            socket.on("typing:start", ({ chatId, userName }) => {
+                socket.broadcast.emit(`chat:${chatId}:typing`, { userName, isTyping: true });
+            });
+
+            socket.on("typing:stop", ({ chatId }) => {
+                socket.broadcast.emit(`chat:${chatId}:typing`, { isTyping: false });
+            });
+            
             socket.on("disconnect", () => {
                 console.log("[Socket.io] Client disconnected:", socket.id);
             });

@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, SendHorizonal } from "lucide-react";
 import qs from "query-string";
+import { useRef, useEffect } from "react";
 
 import {
     Form,
@@ -18,6 +19,7 @@ import { useModal } from "@/hooks/use-modal-store";
 import { EmojiPicker } from "@/components/emoji-picker";
 import { GifPicker } from "@/components/gif-picker";
 import { useReplyStore } from "@/hooks/use-reply-store";
+import { useSocket } from "@/components/providers/socket-provider";
 import { X } from "lucide-react";
 
 interface ChatInputProps {
@@ -39,6 +41,8 @@ export const ChatInput = ({
 }: ChatInputProps) => {
     const { onOpen } = useModal();
     const { reply, setReply } = useReplyStore();
+    const { socket } = useSocket();
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -49,8 +53,35 @@ export const ChatInput = ({
 
     const isLoading = form.formState.isSubmitting;
 
+    useEffect(() => {
+        return () => {
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
+            }
+        };
+    }, []);
+
+    const handleTyping = () => {
+        if (!socket) return;
+        const chatId = query.channelId || query.conversationId;
+        socket.emit("typing:start", { chatId, userName: name });
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+            socket.emit("typing:stop", { chatId });
+            typingTimeoutRef.current = null;
+        }, 1000);
+    };
+
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
+            if (socket && typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
+                socket.emit("typing:stop", { chatId: query.channelId || query.conversationId });
+            }
             const url = qs.stringifyUrl({
                 url: apiUrl,
                 query,
@@ -127,6 +158,10 @@ export const ChatInput = ({
                                                 className="flex-1 bg-transparent border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-zinc-600 dark:text-zinc-200 h-full py-4"
                                                 placeholder={`Message ${type === "conversation" ? name : "#" + name}`}
                                                 {...field}
+                                                onChange={(e) => {
+                                                    field.onChange(e);
+                                                    handleTyping();
+                                                }}
                                                 onKeyDown={(e) => {
                                                     if (e.key === "Enter" && !e.shiftKey) {
                                                         e.preventDefault();
