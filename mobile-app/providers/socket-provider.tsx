@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io as ClientIO } from "socket.io-client";
 import { useAuth } from "@clerk/clerk-expo";
+import { useTypingStore } from "@/hooks/use-typing-store";
 
 interface SocketContextType {
   socket: any | null;
@@ -18,6 +19,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const { getToken, isSignedIn } = useAuth();
+  const { addTypingUser, removeTypingUser } = useTypingStore();
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -65,6 +67,17 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         // If websocket fails, it will automatically try polling because of the transport order
       });
 
+      // Handle typing events
+      socketInstance.on("typing:start", ({ chatId, userId, userName }: { chatId: string, userId: string, userName: string }) => {
+        console.log("[SocketProvider] User started typing:", userName, "in", chatId);
+        addTypingUser(chatId, userId, userName);
+      });
+
+      socketInstance.on("typing:stop", ({ chatId, userId }: { chatId: string, userId: string }) => {
+        console.log("[SocketProvider] User stopped typing:", userId, "in", chatId);
+        removeTypingUser(chatId, userId);
+      });
+
       setSocket(socketInstance);
     };
 
@@ -75,7 +88,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         socketInstance.disconnect();
       }
     };
-  }, [isSignedIn]);
+  }, [isSignedIn, addTypingUser, removeTypingUser]);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>
