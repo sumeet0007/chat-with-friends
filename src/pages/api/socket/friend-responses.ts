@@ -60,8 +60,13 @@ export default async function handler(
                 // Socket: notify both users their friends list has changed
                 const userKey1 = `user:${profile.id}:friends`;
                 const userKey2 = `user:${request.senderId}:friends`;
+                const notifKey1 = `user:${profile.id}:notifications`;
+                const notifKey2 = `user:${request.senderId}:notifications`;
+                
                 res?.socket?.server?.io?.emit(userKey1, { action: "friend_added" });
                 res?.socket?.server?.io?.emit(userKey2, { action: "friend_added" });
+                res?.socket?.server?.io?.emit(notifKey1, { type: "friend_accepted", partnerName: request.sender.name });
+                res?.socket?.server?.io?.emit(notifKey2, { type: "friend_accepted", partnerName: profile.name });
             }
         }
 
@@ -72,7 +77,9 @@ export default async function handler(
         // Notify the receiver (me locally) to clear UI; 
         // Notify the sender (on another device) that their request was either accepted or rejected
         const myRequestsKey = `user:${profile.id}:requests`;
+        const myNotifKey = `user:${profile.id}:notifications`;
         res?.socket?.server?.io?.emit(myRequestsKey, { action: "request_processed", requestId });
+        res?.socket?.server?.io?.emit(myNotifKey, { type: "request_processed" });
 
         return res.status(200).json({ message: "Success" });
 

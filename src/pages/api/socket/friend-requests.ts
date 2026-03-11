@@ -95,7 +95,14 @@ export default async function handler(
 
         // Emit socket event to the receiver
         const receiverKey = `user:${receiverId}:requests`;
+        const notificationKey = `user:${receiverId}:notifications`;
+        
         res?.socket?.server?.io?.emit(receiverKey, newRequest);
+        res?.socket?.server?.io?.emit(notificationKey, {
+            type: "friend_request",
+            senderName: profile.name,
+            requestId: newRequest.id
+        });
 
         // Trigger Expo Push Notification
         import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {

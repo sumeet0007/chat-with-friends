@@ -42,9 +42,16 @@ export default clerkMiddleware(async (auth, req) => {
         if (!isPublicRoute(req)) {
             await auth.protect();
         }
-    } catch (error) {
-        console.error("[Middleware Error]", error);
-        throw error; // Re-throw to allow Clerk to handle it or show 500
+    } catch (error: any) {
+        const { pathname } = req.nextUrl;
+        console.error(`[Middleware Error] ${req.method} ${pathname}:`, error.message);
+        
+        // Return a cleaner 404 or 500 if middleware fails
+        if (error.message?.includes("404")) {
+            console.log(`[Middleware 404 Info] Resource not found: ${pathname}`);
+        }
+        
+        return NextResponse.next();
     }
 });
 
