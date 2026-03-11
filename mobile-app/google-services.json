@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1081758718691",
+    "project_id": "chatwithfriends-ae564",
+    "storage_bucket": "chatwithfriends-ae564.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1081758718691:android:35017d8f44fbfe090c43d6",
+        "android_client_info": {
+          "package_name": "com.sumeet.chatwithfriends"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDP6UNcUBSOVcesrrbJHcNoL_MdGTpurOo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
