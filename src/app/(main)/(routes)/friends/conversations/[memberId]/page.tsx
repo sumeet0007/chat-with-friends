@@ -126,6 +126,9 @@ const MemberIdPage = async ({
                         query={{
                             conversationId: conversation.id,
                         }}
+                        chatId={conversation.id}
+                        userId={currentMember.profileId}
+                        userName={currentMember.profile.name}
                     />
                 </>
             )}
