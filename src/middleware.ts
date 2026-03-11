@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
 
 export default clerkMiddleware(async (auth, req) => {
     const { pathname } = req.nextUrl;
+    console.log(`[Incoming Request] ${req.method} ${pathname}`);
 
     // Handle CORS for mobile app and other clients
     if (pathname.startsWith('/api/')) {
