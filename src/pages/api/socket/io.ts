@@ -21,10 +21,14 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
             addTrailingSlash: false,
             cors: {
                 origin: '*',
-                methods: ['GET', 'POST']
+                methods: ['GET', 'POST'],
+                credentials: true
             },
+            transports: ['websocket', 'polling'], // Prefer websocket
             pingTimeout: 60000,
             pingInterval: 25000,
+            connectTimeout: 45000,
+            allowEIO3: true // Support older clients if needed
         });
 
         io.on("connection", (socket) => {

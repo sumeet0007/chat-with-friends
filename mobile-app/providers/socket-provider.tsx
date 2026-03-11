@@ -39,15 +39,19 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       socketInstance = new (ClientIO as any)(apiUrl, {
         path: "/api/socket/io",
         addTrailingSlash: false,
-        transports: ['polling', 'websocket'], // Start with polling for stability, upgrade to websocket
+        transports: ['websocket', 'polling'], // Force websocket first
+        secure: true,
+        rejectUnauthorized: false,
+        forceNew: true,
         auth: {
           token: token
         },
         reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 2000,
-        reconnectionDelayMax: 10000,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
         randomizationFactor: 0.5,
+        timeout: 20000,
       });
 
       socketInstance.on("connect", () => {
