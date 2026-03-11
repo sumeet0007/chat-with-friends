@@ -11,6 +11,9 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { tokenCache } from '@/lib/token-cache';
 import AuthMiddleware from '@/providers/auth-middleware';
 import { TelemetryProvider } from '@/providers/telemetry-provider';
+import { useAuth } from '@clerk/clerk-expo';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { SocketProvider } from '@/providers/socket-provider';
 
 export {
   ErrorBoundary,
@@ -40,7 +43,7 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  console.log("RootLayout - Fonts Loaded:", loaded, "Error:", error);
+  // No logging here to keep terminal clean
 
   // We'll proceed even if fonts aren't loaded to avoid black screen hangs
   // if (!loaded) {
@@ -52,9 +55,11 @@ export default function RootLayout() {
       <ClerkLoaded>
         <QueryClientProvider client={queryClient}>
           <AuthMiddleware>
-            <TelemetryProvider>
-              <RootLayoutNav />
-            </TelemetryProvider>
+            <SocketProvider>
+              <TelemetryProvider>
+                <RootLayoutNav />
+              </TelemetryProvider>
+            </SocketProvider>
           </AuthMiddleware>
         </QueryClientProvider>
       </ClerkLoaded>
@@ -64,6 +69,10 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { isSignedIn } = useAuth();
+  
+  // Register push notifications when signed in
+  usePushNotifications(isSignedIn);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

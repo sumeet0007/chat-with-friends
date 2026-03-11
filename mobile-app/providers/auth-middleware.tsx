@@ -1,12 +1,20 @@
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { useEffect } from "react";
-import { setAuthToken } from "@/lib/api";
+import { setTokenGetter } from "@/lib/api";
 
 export default function AuthMiddleware({ children }: { children: React.ReactNode }) {
     const { isLoaded, isSignedIn, getToken } = useAuth();
     const segments = useSegments();
     const router = useRouter();
+
+    if (isLoaded) {
+        if (isSignedIn) {
+            setTokenGetter(() => getToken());
+        } else {
+            setTokenGetter(() => Promise.resolve(null));
+        }
+    }
 
     useEffect(() => {
         console.log("AuthMiddleware - Loaded:", isLoaded, "SignedIn:", isSignedIn, "Segments:", segments);
@@ -19,15 +27,9 @@ export default function AuthMiddleware({ children }: { children: React.ReactNode
         } else if (!isSignedIn && !inAuthGroup) {
             router.replace("/(auth)/sign-in");
         }
-
-        if (isSignedIn) {
-            getToken().then(token => {
-                setAuthToken(token);
-            });
-        } else {
-            setAuthToken(null);
-        }
     }, [isSignedIn, isLoaded, segments]);
+
+    if (!isLoaded) return null;
 
     return <>{children}</>;
 }

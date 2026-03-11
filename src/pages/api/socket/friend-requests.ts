@@ -97,6 +97,16 @@ export default async function handler(
         const receiverKey = `user:${receiverId}:requests`;
         res?.socket?.server?.io?.emit(receiverKey, newRequest);
 
+        // Trigger Expo Push Notification
+        import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
+            sendExpoPushNotification(
+                receiverId,
+                "New Friend Request",
+                `${profile.name} sent you a friend request.`,
+                { url: `/friends` }
+            ).catch(err => console.error("Expo Push Error", err));
+        }).catch(err => console.error("Failed to load expo-push", err));
+
         return res.status(200).json(newRequest);
 
     } catch (error) {

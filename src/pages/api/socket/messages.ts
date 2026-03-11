@@ -54,7 +54,11 @@ export default async function handler(
                 }
             },
             include: {
-                members: true,
+                members: {
+                    include: {
+                        profile: true,
+                    }
+                },
             }
         });
 
@@ -106,12 +110,14 @@ export default async function handler(
         });
 
         const channelKey = `chat:${channelId}:messages`;
-        res?.socket?.server?.io?.emit(channelKey, message);
+        console.log(`[Socket] Emitting Channel Message to key: ${channelKey}`);
+        const emitted = res?.socket?.server?.io?.emit(channelKey, message);
+        console.log(`[Socket] Emitted success: ${!!emitted}`);
 
         // Global notifications for other members
         server.members.forEach((m) => {
             if (m.profileId !== profile.id) {
-                const notificationKey = `user:${m.profileId}:notifications`;
+                const notificationKey = `user:${m.profile.userId}:notifications`;
                 res?.socket?.server?.io?.emit(notificationKey, {
                     type: "channel_message",
                     serverId,
@@ -153,6 +159,19 @@ export default async function handler(
             });
 
             Promise.all(sendPushPromises).catch(err => console.error("Push Error", err));
+            
+            // Trigger Expo Push Notification
+            import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
+                memberProfileIds.forEach(id => {
+                    sendExpoPushNotification(
+                        id,
+                        `New message in ${server.name} #${channel.name}`,
+                        `${profile.name}: ${content.length > 50 ? content.substring(0, 50) + "..." : content}`,
+                        { url: `/servers/${serverId}/channels/${channelId}` }
+                    ).catch(err => console.error("Expo Push Error", err));
+                });
+            }).catch(err => console.error("Failed to load expo-push", err));
+
         } catch (pushError) {
             console.error("Failed to send web push", pushError);
         }
