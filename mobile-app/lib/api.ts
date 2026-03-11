@@ -1,5 +1,7 @@
 import axios from "axios";
 
+console.log("[API] Initializing with baseURL:", process.env.EXPO_PUBLIC_API_URL);
+
 export const api = axios.create({
     baseURL: process.env.EXPO_PUBLIC_API_URL,
     timeout: 15000,
@@ -52,6 +54,15 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+
+        // Log detailed error for debugging
+        console.error("[API Error]", {
+            url: originalRequest?.url,
+            method: originalRequest?.method,
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message
+        });
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
