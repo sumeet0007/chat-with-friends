@@ -18,18 +18,47 @@ export async function GET() {
             return new NextResponse("DM Server not found", { status: 404 });
         }
 
-        // Get members of the DM server (this is how we track DMs on web)
-        const members = await db.member.findMany({
+        const currentMember = await db.member.findFirst({
             where: {
                 serverId: dmServer.id,
-                profileId: {
-                    not: profile.id
-                }
-            },
-            include: {
-                profile: true
+                profileId: profile.id
             }
         });
+
+        let activeMembers: any[] = [];
+
+        if (currentMember) {
+            const conversations = await db.conversation.findMany({
+                where: {
+                    OR: [
+                        { memberOneId: currentMember.id },
+                        { memberTwoId: currentMember.id }
+                    ]
+                },
+                include: {
+                    memberOne: { include: { profile: true } },
+                    memberTwo: { include: { profile: true } },
+                    directMessages: {
+                        orderBy: { createdAt: "desc" },
+                        take: 1
+                    }
+                }
+            });
+
+            activeMembers = conversations
+                .filter(c => c.directMessages.length > 0)
+                .map(c => {
+                    const otherMember = c.memberOneId === currentMember.id ? c.memberTwo : c.memberOne;
+                    return {
+                        id: otherMember.id,
+                        profile: otherMember.profile,
+                        lastMessage: c.directMessages[0]?.content || null,
+                        lastMessageDate: c.directMessages[0]?.createdAt || null,
+                        conversationId: c.id
+                    };
+                })
+                .sort((a, b) => new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime());
+        }
 
         // Get friends
         const friends = await (db as any).friend.findMany({
@@ -44,7 +73,7 @@ export async function GET() {
         });
 
         return NextResponse.json({
-            members,
+            members: activeMembers,
             friends,
             requests
         });

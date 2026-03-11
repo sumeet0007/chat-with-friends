@@ -9,6 +9,8 @@ import { AddFriendModal } from '@/components/AddFriendModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocket } from '@/hooks/use-socket';
 import Reanimated, { FadeIn, FadeInRight, Layout } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 
 // Optional Haptics check
 let Haptics: any = null;
@@ -26,6 +28,8 @@ interface Member {
   id: string;
   profile: Profile;
   lastMessage?: string;
+  lastMessageDate?: string;
+  conversationId?: string;
 }
 
 interface Friend {
@@ -47,8 +51,38 @@ export default function DMSTabScreen() {
   const [activeTab, setActiveTab] = useState<'FRIENDS' | 'MESSAGES'>('MESSAGES');
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [readTimestamps, setReadTimestamps] = useState<Record<string, string>>({});
   const insets = useSafeAreaInsets();
   const { socket } = useSocket();
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadReadStates = async () => {
+        try {
+          const stored = await AsyncStorage.getItem('chatReadTimestamps');
+          if (stored) {
+            setReadTimestamps(JSON.parse(stored));
+          }
+        } catch (e) {
+          console.error('Failed to load read statuses', e);
+        }
+      };
+      loadReadStates();
+    }, [])
+  );
+
+  const markAsReadAndNavigate = async (memberId: string) => {
+      Haptics?.impactAsync?.(Haptics?.ImpactFeedbackStyle?.Light);
+      try {
+          const now = new Date().toISOString();
+          const updated = { ...readTimestamps, [memberId]: now };
+          setReadTimestamps(updated);
+          await AsyncStorage.setItem('chatReadTimestamps', JSON.stringify(updated));
+      } catch (e) {
+          console.error("Failed to save read status", e);
+      }
+      router.push(`/(main)/conversations/${memberId}` as any);
+  };
 
   useEffect(() => {
     if (!socket || !user?.id) return;
@@ -196,13 +230,13 @@ export default function DMSTabScreen() {
               data={members}
               keyExtractor={(item) => item.id}
               contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}
-              renderItem={({ item }) => (
+              renderItem={({ item }) => {
+                const isUnread = item.lastMessageDate && (!readTimestamps[item.id] || new Date(item.lastMessageDate) > new Date(readTimestamps[item.id]));
+
+                return (
                 <Reanimated.View entering={FadeInRight.duration(300)}>
                     <TouchableOpacity
-                      onPress={() => {
-                        Haptics?.impactAsync?.(Haptics?.ImpactFeedbackStyle?.Light);
-                        router.push(`/(main)/conversations/${item.id}` as any);
-                      }}
+                      onPress={() => markAsReadAndNavigate(item.id)}
                       className="flex-row items-center py-3.5 border-b border-white/5 active:bg-white/5 px-2 rounded-xl"
                     >
                       <View className="relative">
@@ -210,15 +244,20 @@ export default function DMSTabScreen() {
                         <View className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-[#23A559] border-[3px] border-[#313338]" />
                       </View>
                       <View className="ml-4 flex-1">
-                        <Text className="text-white font-bold text-[16px]">{item.profile.name}</Text>
-                        <Text className="text-[#B5BAC1] text-[13px] font-medium mt-0.5" numberOfLines={1}>
+                        <Text className={`text-white text-[16px] ${isUnread ? 'font-black' : 'font-bold'}`}>{item.profile.name}</Text>
+                        <Text className={`text-[13px] mt-0.5 ${isUnread ? 'text-white font-bold' : 'text-[#B5BAC1] font-medium'}`} numberOfLines={1}>
                             {item.lastMessage || 'Tap to start chatting'}
                         </Text>
                       </View>
-                      <MessageSquare size={18} color="#4E5058" />
+                      <View className="items-end justify-center">
+                          {isUnread && (
+                              <View className="w-3 h-3 rounded-full bg-[#5865F2] mb-1" />
+                          )}
+                          <MessageSquare size={18} color="#4E5058" />
+                      </View>
                     </TouchableOpacity>
                 </Reanimated.View>
-              )}
+              )}}
               ListEmptyComponent={
                 <View className="mt-20 items-center justify-center px-10">
                     <MessageSquare size={80} color="#1E1F22" />

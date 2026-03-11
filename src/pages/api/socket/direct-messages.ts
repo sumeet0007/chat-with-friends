@@ -122,44 +122,48 @@ export default async function handler(
             content: content.length > 50 ? content.substring(0, 50) + "..." : content
         });
 
-        // Trigger Web Push Notification
-        try {
-            const pushSubscriptions = await db.pushSubscription.findMany({
-                where: { profileId: otherMember.profileId }
-            });
-
-            const sendPushPromises = pushSubscriptions.map((sub: any) => {
-                const payload = JSON.stringify({
-                    title: `New message from ${profile.name}`,
-                    body: content.length > 50 ? content.substring(0, 50) + "..." : content,
-                    url: `/friends/conversations/${otherMember.id}`
+        // Trigger Notifications in the background so it doesn't block message sending
+        const sendNotifications = async () => {
+            try {
+                const pushSubscriptions = await db.pushSubscription.findMany({
+                    where: { profileId: otherMember.profileId }
                 });
-                return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
-                    const formattedSub = {
-                        endpoint: sub.endpoint,
-                        keys: {
-                            auth: sub.auth,
-                            p256dh: sub.p256dh
-                        }
-                    };
-                    return sendWebPushNotification(formattedSub as any, payload);
+
+                const sendPushPromises = pushSubscriptions.map((sub: any) => {
+                    const payload = JSON.stringify({
+                        title: `New message from ${profile.name}`,
+                        body: content.length > 50 ? content.substring(0, 50) + "..." : content,
+                        url: `/friends/conversations/${otherMember.id}`
+                    });
+                    return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
+                        const formattedSub = {
+                            endpoint: sub.endpoint,
+                            keys: {
+                                auth: sub.auth,
+                                p256dh: sub.p256dh
+                            }
+                        };
+                        return sendWebPushNotification(formattedSub as any, payload);
+                    });
                 });
-            });
 
-            Promise.all(sendPushPromises).catch(err => console.error("Push Error", err));
-        } catch (pushError) {
-            console.error("Failed to send web push", pushError);
-        }
+                Promise.all(sendPushPromises).catch(err => console.error("Push Error", err));
+            } catch (pushError) {
+                console.error("Failed to send web push", pushError);
+            }
 
-        // Trigger Expo Push Notification
-        import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
-            sendExpoPushNotification(
-                otherMember.profileId,
-                profile.name,
-                content.length > 50 ? content.substring(0, 50) + "..." : content,
-                { url: `/friends/conversations/${otherMember.id}` }
-            );
-        }).catch(err => console.error("Expo Push Error", err));
+            // Trigger Expo Push Notification
+            import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
+                sendExpoPushNotification(
+                    otherMember.profileId,
+                    profile.name,
+                    content.length > 50 ? content.substring(0, 50) + "..." : content,
+                    { url: `/friends/conversations/${otherMember.id}` }
+                ).catch(err => console.error("Expo Push Error", err));
+            }).catch(err => console.error("Failed to load expo-push", err));
+        };
+
+        sendNotifications();
 
         return res.status(200).json(message);
     } catch (error) {

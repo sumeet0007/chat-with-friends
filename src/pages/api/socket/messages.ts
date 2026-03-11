@@ -130,51 +130,55 @@ export default async function handler(
             }
         });
 
-        // Trigger Web Push Notification
-        try {
-            const memberProfileIds = server.members
-                .map(m => m.profileId)
-                .filter(id => id !== profile.id);
+        // Trigger Notifications in the background so it doesn't block message sending
+        const sendNotifications = async () => {
+            try {
+                const memberProfileIds = server.members
+                    .map(m => m.profileId)
+                    .filter(id => id !== profile.id);
 
-            const pushSubscriptions = await db.pushSubscription.findMany({
-                where: { profileId: { in: memberProfileIds } }
-            });
-
-            const sendPushPromises = pushSubscriptions.map((sub: any) => {
-                const payload = JSON.stringify({
-                    title: `New message in ${server.name} #${channel.name}`,
-                    body: `${profile.name}: ${content.length > 50 ? content.substring(0, 50) + "..." : content}`,
-                    url: `/servers/${serverId}/channels/${channelId}`
+                const pushSubscriptions = await db.pushSubscription.findMany({
+                    where: { profileId: { in: memberProfileIds } }
                 });
-                return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
-                    const formattedSub = {
-                        endpoint: sub.endpoint,
-                        keys: {
-                            auth: sub.auth,
-                            p256dh: sub.p256dh
-                        }
-                    };
-                    return sendWebPushNotification(formattedSub as any, payload);
-                });
-            });
 
-            Promise.all(sendPushPromises).catch(err => console.error("Push Error", err));
-            
-            // Trigger Expo Push Notification
-            import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
-                memberProfileIds.forEach(id => {
-                    sendExpoPushNotification(
-                        id,
-                        `New message in ${server.name} #${channel.name}`,
-                        `${profile.name}: ${content.length > 50 ? content.substring(0, 50) + "..." : content}`,
-                        { url: `/servers/${serverId}/channels/${channelId}` }
-                    ).catch(err => console.error("Expo Push Error", err));
+                const sendPushPromises = pushSubscriptions.map((sub: any) => {
+                    const payload = JSON.stringify({
+                        title: `New message in ${server.name} #${channel.name}`,
+                        body: `${profile.name}: ${content.length > 50 ? content.substring(0, 50) + "..." : content}`,
+                        url: `/servers/${serverId}/channels/${channelId}`
+                    });
+                    return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
+                        const formattedSub = {
+                            endpoint: sub.endpoint,
+                            keys: {
+                                auth: sub.auth,
+                                p256dh: sub.p256dh
+                            }
+                        };
+                        return sendWebPushNotification(formattedSub as any, payload);
+                    });
                 });
-            }).catch(err => console.error("Failed to load expo-push", err));
 
-        } catch (pushError) {
-            console.error("Failed to send web push", pushError);
-        }
+                Promise.all(sendPushPromises).catch(err => console.error("Push Error", err));
+                
+                // Trigger Expo Push Notification
+                import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
+                    memberProfileIds.forEach(id => {
+                        sendExpoPushNotification(
+                            id,
+                            `New message in ${server.name} #${channel.name}`,
+                            `${profile.name}: ${content.length > 50 ? content.substring(0, 50) + "..." : content}`,
+                            { url: `/servers/${serverId}/channels/${channelId}` }
+                        ).catch(err => console.error("Expo Push Error", err));
+                    });
+                }).catch(err => console.error("Failed to load expo-push", err));
+
+            } catch (pushError) {
+                console.error("Failed to send push notifications", pushError);
+            }
+        };
+
+        sendNotifications();
 
         return res.status(200).json(message);
     } catch (error) {

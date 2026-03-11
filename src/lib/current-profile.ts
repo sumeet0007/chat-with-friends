@@ -8,11 +8,25 @@ export const currentProfile = async () => {
         return null;
     }
 
-    const profile = await db.profile.findUnique({
+    let profile = await db.profile.findUnique({
         where: {
             userId
         }
     });
+
+    if (!profile) {
+        const user = await currentUser();
+        if (user) {
+            profile = await db.profile.create({
+                data: {
+                    userId: user.id,
+                    name: `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "User",
+                    imageUrl: user.imageUrl,
+                    email: user.emailAddresses[0].emailAddress
+                }
+            });
+        }
+    }
 
     // Sync latest user details from Clerk
     if (profile) {

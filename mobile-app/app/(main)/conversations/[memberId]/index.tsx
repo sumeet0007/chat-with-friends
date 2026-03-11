@@ -15,6 +15,7 @@ import { ChatBackground } from '@/components/chat/ChatBackground';
 import { GifPicker } from '@/components/chat/GifPicker';
 import { ThemePicker } from '@/components/chat/ThemePicker';
 import { CatchUpModal } from '@/components/chat/CatchUpModal';
+import { LinkPreview } from '@/components/chat/LinkPreview';
 import { uploadFile } from '@/lib/upload';
 import Reanimated, { FadeInDown, Layout, FadeInUp } from 'react-native-reanimated';
 
@@ -349,6 +350,10 @@ const MessageItem = React.memo(({ item, hasTheme, isFirstInGroup }: { item: any,
     const isSystemMessage = item.content === "changed the chat wallpaper" || item.content === "cleared the chat theme";
     const isOptimistic = item.isOptimistic;
 
+    // URL Detection
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urls = item.content.match(urlRegex);
+
     if (isSystemMessage) {
         return (
             <View className="flex-row items-center justify-center my-3 px-4">
@@ -393,7 +398,12 @@ const MessageItem = React.memo(({ item, hasTheme, isFirstInGroup }: { item: any,
                             <Image source={{ uri: item.fileUrl }} className="w-full h-full" resizeMode="cover" />
                         </View>
                     ) : (
-                        <Text className="text-[#DBDEE1] text-[15px] leading-5 font-medium">{item.content}</Text>
+                        <View>
+                            <Text className="text-[#DBDEE1] text-[15px] leading-5 font-medium">{item.content}</Text>
+                            {urls && urls.map((url: string, i: number) => (
+                                <LinkPreview key={i} url={url} />
+                            ))}
+                        </View>
                     )}
 
                     {isOptimistic && (

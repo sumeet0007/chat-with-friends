@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from "react";
-import { Text, TextInput, TouchableOpacity, View, Image, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { Text, TextInput, TouchableOpacity, View, Image, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { useRouter, Link } from "expo-router";
 import { useGoogleOAuth } from "@/hooks/use-google-oauth";
+import * as Haptics from 'expo-haptics';
 
 export default function SignInScreen() {
     const { signIn, setActive, isLoaded } = useSignIn();
@@ -16,20 +17,48 @@ export default function SignInScreen() {
 
     const onSignInPress = useCallback(async () => {
         if (!isLoaded) return;
+
+        const trimmedIdentifier = emailAddress.trim();
+        if (!trimmedIdentifier) {
+            setError("Please enter your email or username.");
+            return;
+        }
+
         setLoading(true);
         setError("");
 
         try {
             const completeSignIn = await signIn.create({
-                identifier: emailAddress,
+                identifier: trimmedIdentifier,
                 password,
             });
 
-            await setActive({ session: completeSignIn.createdSessionId });
-            router.replace("/(tabs)");
+            console.log("SignIn Status:", completeSignIn.status);
+
+            if (completeSignIn.status === "complete") {
+                await setActive({ session: completeSignIn.createdSessionId });
+                Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Success);
+
+                // Small delay to ensure session propagation
+                setTimeout(() => {
+                    router.replace("/(tabs)");
+                }, 500);
+            } else {
+                console.log("Incomplete sign-in:", JSON.stringify(completeSignIn, null, 2));
+                setError("Your account requires further verification. Please check your email.");
+            }
         } catch (err: any) {
-            console.error(JSON.stringify(err, null, 2));
-            setError(err.errors?.[0]?.message || "Invalid email or password");
+            console.error("SignIn Error:", JSON.stringify(err, null, 2));
+            const clerkError = err.errors?.[0];
+
+            // Specifically check for format invalid vs other errors
+            if (clerkError?.code === "form_param_format_invalid") {
+                setError("That email or username doesn't look right. Please check for typos.");
+            } else {
+                setError(clerkError?.longMessage || clerkError?.message || "Invalid email or password");
+            }
+
+            Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Error);
         } finally {
             setLoading(false);
         }
@@ -43,73 +72,74 @@ export default function SignInScreen() {
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-[#313338]">
                 <View className="flex-1 px-6 pt-20 pb-10">
                     <View className="items-center mb-10">
-                        {/* Discord-like Logo Placeholder */}
-                        <View className="w-16 h-16 bg-[#5865F2] rounded-2xl items-center justify-center mb-4">
-                            <Text className="text-white text-3xl font-bold">D</Text>
+                        <View className="w-20 h-20 bg-[#5865F2] rounded-3xl items-center justify-center mb-4 shadow-xl shadow-[#5865F2]/40">
+                            <Text className="text-white text-4xl font-black italic">D</Text>
                         </View>
-                        <Text className="text-white text-3xl font-bold tracking-tight">Welcome back!</Text>
-                        <Text className="text-[#B5BAC1] text-lg text-center mt-2">
+                        <Text className="text-white text-3xl font-[900] tracking-tighter">Welcome back!</Text>
+                        <Text className="text-[#B5BAC1] text-base text-center mt-2 font-medium">
                             We're so excited to see you again!
                         </Text>
                     </View>
 
                     <View className="space-y-6">
-                        <View>
-                            <Text className="text-[#B5BAC1] text-xs font-bold uppercase mb-2">
-                                Account Information
-                            </Text>
-                            <View className="space-y-4">
-                                <View>
-                                    <Text className="text-[#B5BAC1] text-[10px] font-bold uppercase mb-1">
-                                        Email or Phone Number
-                                    </Text>
-                                    <TextInput
-                                        autoCapitalize="none"
-                                        value={emailAddress}
-                                        placeholderTextColor="#4E5058"
-                                        className="bg-[#1E1F22] text-[#DBDEE1] p-4 rounded-md font-medium"
-                                        onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-                                    />
-                                </View>
+                        <View className="space-y-4">
+                            <View>
+                                <Text className="text-[#B5BAC1] text-[10px] font-black uppercase mb-1.5 ml-1">
+                                    Email or Username
+                                </Text>
+                                <TextInput
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    keyboardType="email-address"
+                                    value={emailAddress}
+                                    placeholder="email@example.com"
+                                    placeholderTextColor="#4E5058"
+                                    className="bg-[#1E1F22] text-[#DBDEE1] p-4 rounded-xl font-bold border border-white/5"
+                                    onChangeText={(val) => setEmailAddress(val)}
+                                />
+                            </View>
 
-                                <View>
-                                    <Text className="text-[#B5BAC1] text-[10px] font-bold uppercase mb-1">
-                                        Password
-                                    </Text>
-                                    <TextInput
-                                        value={password}
-                                        placeholderTextColor="#4E5058"
-                                        className="bg-[#1E1F22] text-[#DBDEE1] p-4 rounded-md font-medium"
-                                        secureTextEntry={true}
-                                        onChangeText={(password) => setPassword(password)}
-                                    />
-                                </View>
+                            <View>
+                                <Text className="text-[#B5BAC1] text-[10px] font-black uppercase mb-1.5 ml-1">
+                                    Password
+                                </Text>
+                                <TextInput
+                                    value={password}
+                                    placeholder="••••••••"
+                                    placeholderTextColor="#4E5058"
+                                    className="bg-[#1E1F22] text-[#DBDEE1] p-4 rounded-xl font-bold border border-white/5"
+                                    secureTextEntry={true}
+                                    onChangeText={(val) => setPassword(val)}
+                                />
+                                <TouchableOpacity className="mt-2 ml-1">
+                                    <Text className="text-[#00A8FC] text-xs font-bold">Forgot your password?</Text>
+                                </TouchableOpacity>
                             </View>
                         </View>
 
                         {error ? (
-                            <Text className="text-[#F23F42] text-sm font-medium">{error}</Text>
+                            <View className="bg-[#F23F42]/10 p-3 rounded-lg border border-[#F23F42]/20">
+                                <Text className="text-[#F23F42] text-xs font-bold text-center">{error}</Text>
+                            </View>
                         ) : null}
 
                         <TouchableOpacity 
                             onPress={onSignInPress}
                             disabled={loading}
-                            className={`bg-[#5865F2] p-4 rounded-md items-center mt-2 ${loading ? 'opacity-50' : 'opacity-100'}`}
+                            className={`bg-[#5865F2] p-4 rounded-xl items-center mt-2 shadow-lg shadow-[#5865F2]/30 ${loading ? 'opacity-50' : 'opacity-100'}`}
                         >
-                            <Text className="text-white font-bold text-lg">
-                                {loading ? "Logging in..." : "Log In"}
-                            </Text>
+                            {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-lg">Log In</Text>}
                         </TouchableOpacity>
 
                         <View className="flex-row items-center my-4">
-                            <View className="flex-1 h-[1px] bg-[#4E5058]" />
-                            <Text className="text-[#B5BAC1] text-[10px] font-bold uppercase mx-4">OR</Text>
-                            <View className="flex-1 h-[1px] bg-[#4E5058]" />
+                            <View className="flex-1 h-[1px] bg-[#4E5058]/50" />
+                            <Text className="text-[#B5BAC1] text-[10px] font-black uppercase mx-4">or</Text>
+                            <View className="flex-1 h-[1px] bg-[#4E5058]/50" />
                         </View>
 
                         <TouchableOpacity 
                             onPress={signInWithGoogle}
-                            className="bg-white p-4 rounded-md flex-row items-center justify-center"
+                            className="bg-white p-4 rounded-xl flex-row items-center justify-center border border-zinc-200"
                         >
                             <Image 
                                 source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" }} 
@@ -119,11 +149,11 @@ export default function SignInScreen() {
                             <Text className="text-[#313338] font-bold text-base">Continue with Google</Text>
                         </TouchableOpacity>
 
-                        <View className="flex-row items-center mt-4">
-                            <Text className="text-[#B5BAC1] text-sm">Need an account? </Text>
+                        <View className="flex-row items-center justify-center mt-4">
+                            <Text className="text-[#B5BAC1] text-sm font-medium">Need an account? </Text>
                             <Link href="/(auth)/sign-up" asChild>
                                 <TouchableOpacity>
-                                    <Text className="text-[#00A8FC] text-sm font-medium">Register</Text>
+                                    <Text className="text-[#00A8FC] text-sm font-black">Register</Text>
                                 </TouchableOpacity>
                             </Link>
                         </View>
