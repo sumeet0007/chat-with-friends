@@ -15,9 +15,42 @@ import { useAuth } from '@clerk/clerk-expo';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { SocketProvider } from '@/providers/socket-provider';
 
-export {
-  ErrorBoundary,
-} from 'expo-router';
+import { ErrorBoundaryProps } from 'expo-router';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#1E1F22' }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center' }}>
+        <View style={{ alignItems: 'center', marginBottom: 24 }}>
+          <Text style={{ fontSize: 48 }}>⚠️</Text>
+          <Text style={{ color: '#F23F42', fontSize: 24, fontWeight: 'bold', marginTop: 16, textAlign: 'center' }}>
+            Fatal App Error
+          </Text>
+          <Text style={{ color: '#DBDEE1', fontSize: 16, marginTop: 8, textAlign: 'center' }}>
+            The app encountered an unexpected error and needs to recover. Please take a screenshot of this page for the developer.
+          </Text>
+        </View>
+
+        <View style={{ backgroundColor: '#111214', padding: 16, borderRadius: 12, marginBottom: 24 }}>
+          <Text style={{ color: '#F23F42', fontFamily: 'monospace', fontWeight: 'bold', marginBottom: 8 }}>
+            {error.name}: {error.message}
+          </Text>
+          <Text style={{ color: '#80848E', fontFamily: 'monospace', fontSize: 12 }}>
+            {error.stack}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={retry}
+          style={{ backgroundColor: '#5865F2', padding: 16, borderRadius: 12, alignItems: 'center' }}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Tap to Retry</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 const queryClient = new QueryClient();
@@ -70,7 +103,7 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { isSignedIn } = useAuth();
-  
+
   // Register push notifications when signed in
   usePushNotifications(isSignedIn);
 
