@@ -21,12 +21,14 @@ export const sendExpoPushNotification = async (
 
     if (tokens.length === 0) return;
 
-    const messages: ExpoPushMessage[] = tokens.map((token: any) => ({
+    const messages: any[] = tokens.map((token: any) => ({
       to: token.token,
       title,
       body,
       data: data || {},
       sound: "default",
+      priority: "high",
+      channelId: "default",
     }));
 
     // Send the messages in chunks of 100 via exponential backoff (simplified here)
