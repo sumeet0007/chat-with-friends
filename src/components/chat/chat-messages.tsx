@@ -226,8 +226,8 @@ export const ChatMessages = memo(({
                     ))}
                 </div>
                 {typingUser && (
-                    <div className="px-4 py-2 text-sm text-zinc-500 dark:text-zinc-400 italic">
-                        {typingUser} is typing...
+                    <div className="px-4 pt-0 pb-0 text-sm text-zinc-500 dark:text-zinc-400 italic">
+                        {typingUser}saurabhkhairnar10@gmail is typing...
                     </div>
                 )}
                 <div ref={bottomRef} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ import { useChatTheme } from '@/hooks/use-chat-theme';
 import { ChatBackground } from '@/components/chat/ChatBackground';
 import { GifPicker } from '@/components/chat/GifPicker';
 import { ThemePicker } from '@/components/chat/ThemePicker';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { Palette, Image as ImageIcon, Sparkles, Loader2 } from 'lucide-react-native';
 import { uploadFile } from '@/lib/upload';
 
@@ -28,6 +29,7 @@ export default function ChannelScreen() {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const insets = useSafeAreaInsets();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: channelData, isLoading: isChannelLoading } = useQuery({
     queryKey: ['channel', channelId],
@@ -126,11 +128,52 @@ export default function ChannelScreen() {
 
   const { theme } = useChatTheme(channelId as string);
 
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleTyping = () => {
+    if (!socket || !channelId) return;
+    
+    const chatId = channelId as string;
+    const userName = user?.firstName || "Unknown";
+    const userId = user?.id || "unknown";
+    
+    // Emit typing start
+    socket.emit("typing:start", { chatId, userId, userName });
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set new timeout to stop typing
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("typing:stop", { chatId, userId });
+      typingTimeoutRef.current = null;
+    }, 1000);
+  };
+
   const onSend = async (overrideContent?: string, overrideFileUrl?: string) => {
     if ((!content.trim() && !overrideFileUrl) || !channelId) return;
     
     const userContent = overrideContent || content.trim();
     if (!overrideFileUrl) setContent('');
+
+    // Stop typing when sending
+    if (socket && typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+      socket.emit("typing:stop", { 
+        chatId: channelId, 
+        userId: user?.id 
+      });
+    }
 
     // Optimistic Update
     const optimisticId = `temp-${Date.now()}`;
@@ -252,6 +295,11 @@ export default function ChannelScreen() {
           contentContainerStyle={{ paddingVertical: 10 }}
         />
 
+        <TypingIndicator 
+          chatId={channelId as string} 
+          currentUserId={user?.id}
+        />
+
         {/* Input */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -297,7 +345,12 @@ export default function ChannelScreen() {
                 placeholder={`Message #${channel?.name}`}
                 placeholderTextColor="#4E5058"
                 value={content}
-                onChangeText={setContent}
+                onChangeText={(text) => {
+                  setContent(text);
+                  if (text.trim()) {
+                    handleTyping();
+                  }
+                }}
                 multiline
               />
               {content.trim() ? (

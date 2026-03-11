@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ import { ChatBackground } from '@/components/chat/ChatBackground';
 import { GifPicker } from '@/components/chat/GifPicker';
 import { ThemePicker } from '@/components/chat/ThemePicker';
 import { CatchUpModal } from '@/components/chat/CatchUpModal';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { uploadFile } from '@/lib/upload';
 import Reanimated, { FadeInDown, Layout, FadeInUp } from 'react-native-reanimated';
 
@@ -36,6 +37,7 @@ export default function ConversationScreen() {
   const [showCatchUp, setShowCatchUp] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const insets = useSafeAreaInsets();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: conversationData, isLoading: isConvLoading } = useQuery({
     queryKey: ['conversation', memberId],
@@ -123,6 +125,37 @@ export default function ConversationScreen() {
 
   const { theme } = useChatTheme(conversationData?.conversation?.id);
 
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleTyping = () => {
+    if (!socket || !conversationData?.conversation?.id) return;
+    
+    const chatId = conversationData.conversation.id;
+    const userName = user?.firstName || "Unknown";
+    const userId = user?.id || "unknown";
+    
+    // Emit typing start
+    socket.emit("typing:start", { chatId, userId, userName });
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set new timeout to stop typing
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("typing:stop", { chatId, userId });
+      typingTimeoutRef.current = null;
+    }, 1000);
+  };
+
   const onSend = useCallback(async (overrideContent?: string, overrideFileUrl?: string) => {
     if ((!content.trim() && !overrideFileUrl) || !conversationData?.conversation?.id) return;
     
@@ -131,6 +164,16 @@ export default function ConversationScreen() {
     const userContent = overrideContent || content.trim();
     const conversationId = conversationData.conversation.id;
     if (!overrideFileUrl) setContent('');
+
+    // Stop typing when sending
+    if (socket && typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+      socket.emit("typing:stop", { 
+        chatId: conversationId, 
+        userId: user?.id 
+      });
+    }
 
     const optimisticId = `temp-${Date.now()}`;
     const optimisticMessage = {
@@ -277,6 +320,11 @@ export default function ConversationScreen() {
           contentContainerStyle={{ paddingVertical: 16 }}
         />
 
+        <TypingIndicator 
+          chatId={conversationData?.conversation?.id} 
+          currentUserId={user?.id}
+        />
+
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom + 60 : 0}
@@ -292,7 +340,12 @@ export default function ConversationScreen() {
                 placeholder={`Message @${otherMember?.profile?.name}`}
                 placeholderTextColor="#4E5058"
                 value={content}
-                onChangeText={setContent}
+                onChangeText={(text) => {
+                  setContent(text);
+                  if (text.trim()) {
+                    handleTyping();
+                  }
+                }}
                 multiline
               />
 
