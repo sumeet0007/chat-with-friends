@@ -15,8 +15,8 @@ export const sendWebPushNotification = async (
     try {
         await webpush.sendNotification(subscription, payload);
     } catch (error: any) {
-        if (error.statusCode === 410 || error.statusCode === 404) {
-            console.log("Subscription has expired or is no longer valid. Deleting...");
+        if (error.statusCode === 410 || error.statusCode === 404 || error.statusCode === 403) {
+            console.log(`[WebPush] Subscription invalid/expired (Status: ${error.statusCode})`);
             try {
                 await db.pushSubscription.delete({
                     where: {
@@ -24,7 +24,7 @@ export const sendWebPushNotification = async (
                     }
                 });
             } catch (deleteError) {
-                console.error("Failed to delete expired subscription:", deleteError);
+                // Ignore delete errors for expired tokens
             }
         } else {
             console.error("Error sending web push notification:", error);
