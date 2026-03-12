@@ -19,7 +19,12 @@ export const sendExpoPushNotification = async (
       where: { profileId },
     });
 
-    if (tokens.length === 0) return;
+    console.log(`[Push] Found ${tokens.length} tokens for profile ${profileId}`);
+
+    if (tokens.length === 0) {
+      console.log("[Push] ABORTING: No tokens found in database for this user.");
+      return;
+    }
 
     const messages: any[] = tokens.map((token: any) => ({
       to: token.token,
@@ -29,12 +34,15 @@ export const sendExpoPushNotification = async (
       sound: "default",
       priority: "high",
       channelId: "default",
+      _displayInForeground: true, // For Expo notifications
     }));
+
+    console.log("[Push] Sending payload to Expo:", JSON.stringify(messages, null, 2));
 
     // Send the messages in chunks of 100 via exponential backoff (simplified here)
     const expoPushEndpoint = "https://exp.host/--/api/v2/push/send";
 
-    await fetch(expoPushEndpoint, {
+    const response = await fetch(expoPushEndpoint, {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -43,7 +51,11 @@ export const sendExpoPushNotification = async (
       },
       body: JSON.stringify(messages),
     });
+
+    const responseData = await response.json();
+    console.log("[Push] Expo Response:", JSON.stringify(responseData, null, 2));
+
   } catch (error) {
-    console.error("Error sending push notification:", error);
+    console.error("[Push] FATAL ERROR sending notification:", error);
   }
 };
