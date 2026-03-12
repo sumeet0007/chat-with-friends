@@ -119,6 +119,7 @@ export default async function handler(
             type: "message",
             conversationId,
             senderName: profile.name,
+            senderProfileId: profile.id,
             content: content.length > 50 ? content.substring(0, 50) + "..." : content
         });
 

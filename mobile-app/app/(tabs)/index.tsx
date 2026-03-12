@@ -91,6 +91,27 @@ export default function DMSTabScreen() {
     const notificationKey = `user:${user.id}:notifications`;
     
     socket.on(notificationKey, (data: any) => {
+        // Optimistically update the message list for instant "Live" sorting
+        if (data.type === 'message' && data.conversationId) {
+            queryClient.setQueryData(['friends-data'], (old: any) => {
+                if (!old || !old.members) return old;
+                
+                const newMembers = old.members.map((m: any) => {
+                    if (m.conversationId === data.conversationId) {
+                        return {
+                            ...m,
+                            lastMessage: data.content,
+                            lastMessageDate: new Date().toISOString(),
+                            lastMessageSenderProfileId: data.senderProfileId
+                        };
+                    }
+                    return m;
+                });
+                
+                return { ...old, members: newMembers };
+            });
+        }
+
         refetch();
         if (Platform.OS !== 'web') {
             Haptics?.notificationAsync?.(Haptics?.NotificationFeedbackType?.Success);
@@ -164,6 +185,7 @@ export default function DMSTabScreen() {
   
   const members: Member[] = useMemo(() => {
     const list = data?.members || [];
+    // Force sort by latest message date to ensure sliding to top
     return [...list].sort((a, b) => {
         const dateA = a.lastMessageDate ? new Date(a.lastMessageDate).getTime() : 0;
         const dateB = b.lastMessageDate ? new Date(b.lastMessageDate).getTime() : 0;
@@ -256,7 +278,10 @@ export default function DMSTabScreen() {
                 const isUnread = item.lastMessageDate && isOtherPersonSender && (!readTimestamps[item.id] || new Date(item.lastMessageDate) > new Date(readTimestamps[item.id]));
 
                 return (
-                <Reanimated.View entering={FadeInRight.duration(300)}>
+                <Reanimated.View 
+                    entering={FadeInRight.duration(300)} 
+                    layout={Layout.springify().damping(15)}
+                >
                     <TouchableOpacity
                       onPress={() => markAsReadAndNavigate(item.id)}
                       className="flex-row items-center py-3.5 border-b border-white/5 active:bg-white/5 px-2 rounded-xl"
