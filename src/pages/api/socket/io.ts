@@ -24,11 +24,11 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
                 methods: ['GET', 'POST'],
                 credentials: true
             },
-            transports: ['websocket', 'polling'], // Prefer websocket
+            transports: ['websocket', 'polling'], 
             pingTimeout: 60000,
             pingInterval: 25000,
             connectTimeout: 45000,
-            allowEIO3: true // Support older clients if needed
+            allowEIO3: true
         });
 
         io.on("connection", (socket) => {
