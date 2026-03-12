@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
 import { Channel, ChannelType, Member, Profile, Server } from "@prisma/client";
 
 export type ModalType = "createServer" | "invite" | "editServer" | "members" | "createChannel" | "leaveServer" | "deleteServer" | "deleteChannel" | "editChannel" | "messageFile" | "deleteMessage" | "chatTheme" | "incomingCall";
@@ -9,6 +10,9 @@ interface ModalData {
     channelType?: ChannelType;
     apiUrl?: string;
     query?: Record<string, any>;
+    chatId?: string;
+    chatType?: "channel" | "conversation";
+    chatName?: string;
 }
 
 interface ModalStore {
@@ -19,10 +23,19 @@ interface ModalStore {
     onClose: () => void;
 }
 
-export const useModal = create<ModalStore>((set) => ({
-    type: null,
+const initialState = {
+    type: null as ModalType | null,
     data: {},
     isOpen: false,
+};
+
+export const useModal = create<ModalStore>()(subscribeWithSelector((set) => ({
+    ...initialState,
     onOpen: (type, data = {}) => set({ isOpen: true, type, data }),
     onClose: () => set({ type: null, isOpen: false })
-}));
+})));
+
+// Add server snapshot for SSR
+if (typeof window === 'undefined') {
+    useModal.getServerState = () => initialState;
+}

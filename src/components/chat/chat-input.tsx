@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, SendHorizonal } from "lucide-react";
 import qs from "query-string";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 
 import {
     Form,
@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { useModal } from "@/hooks/use-modal-store";
 import { EmojiPicker } from "@/components/emoji-picker";
 import { GifPicker } from "@/components/gif-picker";
+
 import { useReplyStore } from "@/hooks/use-reply-store";
 import { useSocket } from "@/components/providers/socket-provider";
 import { X } from "lucide-react";
@@ -44,6 +45,11 @@ export const ChatInput = ({
     const { socket } = useSocket();
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Memoize chatId to prevent unnecessary re-renders
+    const chatId = useMemo(() => query.channelId || query.conversationId, [query.channelId, query.conversationId]);
+
+
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -62,9 +68,8 @@ export const ChatInput = ({
         };
     }, []);
 
-    const handleTyping = () => {
+    const handleTyping = useCallback(() => {
         if (!socket) return;
-        const chatId = query.channelId || query.conversationId;
         socket.emit("typing:start", { chatId, userName: name });
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
@@ -73,14 +78,14 @@ export const ChatInput = ({
             socket.emit("typing:stop", { chatId });
             typingTimeoutRef.current = null;
         }, 1000);
-    };
+    }, [socket, chatId, name]);
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
             if (socket && typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
                 typingTimeoutRef.current = null;
-                socket.emit("typing:stop", { chatId: query.channelId || query.conversationId });
+                socket.emit("typing:stop", { chatId });
             }
             const url = qs.stringifyUrl({
                 url: apiUrl,
@@ -129,7 +134,7 @@ export const ChatInput = ({
                         <FormItem>
                             <FormControl>
                                 <div className="px-2 pb-4 md:px-4">
-                                    <div className="flex flex-col w-full bg-zinc-200/90 dark:bg-zinc-700/75 rounded-md overflow-hidden">
+                                <div className="flex flex-col w-full bg-zinc-200/90 dark:bg-zinc-700/75 rounded-md overflow-hidden">
                                         {reply && (
                                             <div className="flex items-center gap-x-2 p-2 px-4 border-b-[1px] border-zinc-300 dark:border-zinc-600">
                                                 <div className="flex-1 text-sm text-zinc-500 dark:text-zinc-400 truncate">

@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { DirectMessage, Member, Message, Profile } from "@prisma/client";
 import { Loader2, ServerCrash, ArrowDown } from "lucide-react";
-import { Fragment, useRef, ElementRef, memo, useState, useEffect } from "react";
+import { Fragment, useRef, ElementRef, memo, useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
 
 import { useChatQuery } from "@/hooks/use-chat-query";
@@ -12,6 +12,7 @@ import { useSocket } from "@/components/providers/socket-provider";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { ChatWelcome } from "./chat-welcome";
 import { ChatItem } from "./chat-item";
+import { PinnedMessagesBanner } from "@/components/pinned-messages-banner";
 
 interface ChatMessagesProps {
     name: string;
@@ -61,9 +62,12 @@ export const ChatMessages = memo(({
     type,
     variant,
 }: ChatMessagesProps) => {
-    const queryKey = `chat:${chatId}`;
-    const addKey = `chat:${chatId}:messages`;
-    const updateKey = `chat:${chatId}:messages:update`;
+    // Memoize expensive computations
+    const queryKey = useMemo(() => `chat:${chatId}`, [chatId]);
+    const addKey = useMemo(() => `chat:${chatId}:messages`, [chatId]);
+    const updateKey = useMemo(() => `chat:${chatId}:messages:update`, [chatId]);
+    const themeKey = useMemo(() => `chat:${paramValue}:theme:update`, [paramValue]);
+    const typingKey = useMemo(() => `chat:${chatId}:typing`, [chatId]);
 
     const chatRef = useRef<ElementRef<"div">>(null);
     const bottomRef = useRef<ElementRef<"div">>(null);
@@ -73,40 +77,41 @@ export const ChatMessages = memo(({
 
     const { socket } = useSocket();
 
+    // Memoize theme fetch function
+    const fetchTheme = useCallback(async () => {
+        try {
+            const response = await axios.get<ChatTheme>(`/api/chat-theme?chatId=${paramValue}`);
+            setTheme(response.data);
+        } catch (error) {
+            console.error(error);
+        }
+    }, [paramValue]);
+
+    // Memoize socket handlers
+    const handleThemeUpdate = useCallback((updatedTheme: ChatTheme) => {
+        setTheme(updatedTheme);
+    }, []);
+
+    const handleTyping = useCallback(({ userName, isTyping }: { userName?: string; isTyping: boolean }) => {
+        setTypingUser(isTyping ? userName || null : null);
+    }, []);
+
     useEffect(() => {
-        const fetchTheme = async () => {
-            try {
-                const response = await axios.get<ChatTheme>(`/api/chat-theme?chatId=${paramValue}`);
-                setTheme(response.data);
-            } catch (error) {
-                console.error(error);
-            }
-        };
         fetchTheme();
 
         if (socket) {
-            const themeKey = `chat:${paramValue}:theme:update`;
-            const handleThemeUpdate = (updatedTheme: ChatTheme) => {
-                setTheme(updatedTheme);
-            };
-            
             socket.on(themeKey, handleThemeUpdate);
-
             return () => {
                 socket.off(themeKey, handleThemeUpdate);
             }
         }
-    }, [paramValue, socket]);
+    }, [fetchTheme, socket, themeKey, handleThemeUpdate]);
 
     useEffect(() => {
         if (!socket) return;
-        const typingKey = `chat:${chatId}:typing`;
-        const handleTyping = ({ userName, isTyping }: { userName?: string; isTyping: boolean }) => {
-            setTypingUser(isTyping ? userName || null : null);
-        };
         socket.on(typingKey, handleTyping);
         return () => { socket.off(typingKey, handleTyping); };
-    }, [socket, chatId]);
+    }, [socket, typingKey, handleTyping]);
 
     const {
         data,
@@ -135,9 +140,18 @@ export const ChatMessages = memo(({
         count: data?.pages?.[0]?.items?.length ?? 0
     });
 
-    const scrollToBottom = () => {
+    const scrollToBottom = useCallback(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    }, []);
+
+    // Memoize theme styles to prevent recalculation
+    const themeStyles = useMemo(() => ({
+        backgroundColor: theme?.backgroundColor || undefined,
+        backgroundImage: theme?.backgroundImage ? `url(${theme.backgroundImage})` : undefined,
+        zIndex: 0
+    }), [theme?.backgroundColor, theme?.backgroundImage]);
+
+    const hasTheme = useMemo(() => !!(theme?.backgroundColor || theme?.backgroundImage), [theme?.backgroundColor, theme?.backgroundImage]);
 
     if (status === "pending") {
         return (
@@ -166,11 +180,7 @@ export const ChatMessages = memo(({
             {/* Theme Background Layer - Fixed behind content */}
             <div
                 className="absolute inset-0 pointer-events-none bg-no-repeat bg-cover bg-center"
-                style={{
-                    backgroundColor: theme?.backgroundColor || undefined,
-                    backgroundImage: theme?.backgroundImage ? `url(${theme.backgroundImage})` : undefined,
-                    zIndex: 0
-                }}
+                style={themeStyles}
             />
             {theme?.backgroundImage && (
                 <div className="absolute inset-0 bg-black/40 pointer-events-none" style={{ zIndex: 0 }} />
@@ -219,7 +229,10 @@ export const ChatMessages = memo(({
                                     isUpdated={message.updatedAt !== message.createdAt}
                                     socketUrl={socketUrl}
                                     socketQuery={socketQuery}
-                                    hasTheme={!!(theme?.backgroundColor || theme?.backgroundImage)}
+                                    hasTheme={hasTheme}
+                                    pinned={(message as any).pinned}
+                                    pinnedAt={(message as any).pinnedAt}
+                                    chatType={type}
                                 />
                             ))}
                         </Fragment>

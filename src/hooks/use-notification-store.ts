@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
 
 export type NotificationType = "friend_request" | "friend_accepted" | "message" | "channel_message";
 
@@ -17,8 +18,12 @@ interface NotificationStore {
     requestBrowserPermission: () => Promise<void>;
 }
 
-export const useNotifications = create<NotificationStore>((set, get) => ({
-    notifications: [],
+const initialState = {
+    notifications: [] as AppNotification[],
+};
+
+export const useNotifications = create<NotificationStore>()(subscribeWithSelector((set, get) => ({
+    ...initialState,
 
     requestBrowserPermission: async () => {
         if ("Notification" in window) {
@@ -54,4 +59,9 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
     removeNotification: (id) => set((state) => ({
         notifications: state.notifications.filter((n) => n.id !== id)
     }))
-}));
+})));
+
+// Add server snapshot for SSR
+if (typeof window === 'undefined') {
+    useNotifications.getServerState = () => initialState;
+}

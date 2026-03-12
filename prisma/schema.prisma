@@ -116,6 +116,9 @@ model Message {
   channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   deleted Boolean @default(false)
+  pinned  Boolean @default(false)
+  pinnedAt DateTime?
+  pinnedById String? @db.ObjectId
 
   replyToId String? @db.ObjectId
   replyTo   Message? @relation("ReplyTo", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -127,6 +130,7 @@ model Message {
   @@index([channelId])
   @@index([memberId])
   @@index([replyToId])
+  @@index([channelId, pinned])
 }
 
 model Conversation {
@@ -156,6 +160,9 @@ model DirectMessage {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   deleted Boolean @default(false)
+  pinned  Boolean @default(false)
+  pinnedAt DateTime?
+  pinnedById String? @db.ObjectId
 
   replyToId String? @db.ObjectId
   replyTo   DirectMessage? @relation("DirectReplyTo", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -167,6 +174,7 @@ model DirectMessage {
   @@index([conversationId])
   @@index([memberId])
   @@index([replyToId])
+  @@index([conversationId, pinned])
 }
 
 model Friend {

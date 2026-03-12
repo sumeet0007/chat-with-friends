@@ -16,19 +16,20 @@ export async function POST(req: Request) {
       return new NextResponse("Invalid subscription", { status: 400 });
     }
 
-    // Check if it already exists
-    const existing = await db.pushSubscription.findUnique({
+    console.log('[WEB_PUSH] Creating/updating subscription for profile:', profile.id);
+
+    // Use upsert to handle duplicates gracefully
+    const pushSubscription = await db.pushSubscription.upsert({
       where: {
         endpoint: subscription.endpoint,
       },
-    });
-
-    if (existing) {
-      return NextResponse.json(existing);
-    }
-
-    const newSubscription = await db.pushSubscription.create({
-      data: {
+      update: {
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+        profileId: profile.id, // Update profile association
+        updatedAt: new Date(),
+      },
+      create: {
         endpoint: subscription.endpoint,
         p256dh: subscription.keys.p256dh,
         auth: subscription.keys.auth,
@@ -36,9 +37,27 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(newSubscription);
+    console.log('[WEB_PUSH] Subscription saved:', pushSubscription.id);
+    return NextResponse.json(pushSubscription);
+    
   } catch (error) {
-    console.log("[WEB_PUSH_POST]", error);
+    console.error("[WEB_PUSH_POST] Error:", error);
+    
+    // Handle duplicate key error specifically
+    if (error.code === 11000 || error.message.includes('duplicate key')) {
+      console.log('[WEB_PUSH] Duplicate key detected, trying to find existing subscription');
+      try {
+        const existing = await db.pushSubscription.findUnique({
+          where: { endpoint: subscription.endpoint }
+        });
+        if (existing) {
+          return NextResponse.json(existing);
+        }
+      } catch (findError) {
+        console.error('[WEB_PUSH] Error finding existing subscription:', findError);
+      }
+    }
+    
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

@@ -6,9 +6,9 @@ import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
-import { Edit, FileIcon, MessageSquare, ShieldAlert, ShieldCheck, Trash, Palette } from "lucide-react";
+import { Edit, FileIcon, MessageSquare, ShieldAlert, ShieldCheck, Trash, Palette, Pin, PinOff } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useMemo, memo } from "react";
+import { useEffect, useState, useMemo, memo, useCallback } from "react";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { ActionTooltip } from "@/components/action-tooltip";
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
 import { useReplyStore } from "@/hooks/use-reply-store";
+import { usePinStore } from "@/hooks/use-pin-store";
 
 const formSchema = z.object({
     content: z.string().min(1),
@@ -49,6 +50,9 @@ interface ChatItemProps {
         };
     } | null;
     hasTheme?: boolean;
+    pinned?: boolean;
+    pinnedAt?: string | null;
+    chatType?: "channel" | "conversation";
 };
 
 const roleIconMap = {
@@ -70,7 +74,10 @@ export const ChatItem = memo(({
     socketQuery,
     replyToId,
     replyTo,
-    hasTheme
+    hasTheme,
+    pinned = false,
+    pinnedAt,
+    chatType
 }: ChatItemProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const { onOpen } = useModal();
@@ -78,13 +85,47 @@ export const ChatItem = memo(({
     const params = useParams();
     const router = useRouter();
 
-    const onMemberClick = () => {
+    const onMemberClick = useCallback(async () => {
         if (member.id === currentMember.id) {
             return;
         }
-
-        router.push(`/servers/${params?.serverId}/conversations/${member.id}`);
-    }
+        
+        console.log('Navigating to conversation:', {
+            memberId: member.id,
+            profileId: member.profile.id,
+            serverId: params?.serverId,
+            currentPath: window.location.pathname
+        });
+        
+        try {
+            // Check if we're in a server context
+            if (params?.serverId) {
+                // Try server conversation first
+                const serverPath = `/servers/${params.serverId}/conversations/${member.id}`;
+                console.log('Attempting server navigation to:', serverPath);
+                router.push(serverPath);
+            } else {
+                // We're in friends context, create/navigate to friend conversation
+                console.log('Attempting friends DM creation for:', member.profile.id);
+                const res = await axios.post("/api/friends/dm", { friendId: member.profile.id });
+                const friendsPath = `/friends/conversations/${res.data.memberId}`;
+                console.log('Navigating to friends conversation:', friendsPath);
+                router.push(friendsPath);
+            }
+        } catch (error) {
+            console.error("Failed to navigate to conversation:", error);
+            // If server conversation fails, try friends conversation as fallback
+            try {
+                console.log('Trying fallback friends DM for:', member.profile.id);
+                const res = await axios.post("/api/friends/dm", { friendId: member.profile.id });
+                const fallbackPath = `/friends/conversations/${res.data.memberId}`;
+                console.log('Fallback navigation to:', fallbackPath);
+                router.push(fallbackPath);
+            } catch (fallbackError) {
+                console.error("Fallback navigation also failed:", fallbackError);
+            }
+        }
+    }, [member.id, member.profile.id, currentMember.id, router, params?.serverId]);
 
     useEffect(() => {
         const handleKeyDown = (event: any) => {
@@ -123,25 +164,85 @@ export const ChatItem = memo(({
         }
     }
 
+    const { addPinnedMessage, removePinnedMessage } = usePinStore();
+
+    const handlePinToggle = useCallback(async () => {
+        try {
+            const url = qs.stringifyUrl({
+                url: `/api/messages/${id}/pin`,
+                query: socketQuery,
+            });
+
+            await axios.patch(url, {
+                action: pinned ? "unpin" : "pin"
+            });
+
+            const chatId = socketQuery.channelId || socketQuery.conversationId;
+            if (pinned) {
+                removePinnedMessage(chatId, id);
+            } else {
+                addPinnedMessage(chatId, {
+                    id,
+                    content,
+                    fileUrl: fileUrl || undefined,
+                    createdAt: new Date().toISOString(),
+                    pinnedAt: new Date().toISOString(),
+                    pinnedBy: {
+                        id: currentMember.id,
+                        name: currentMember.profile?.name || 'Unknown',
+                        imageUrl: currentMember.profile?.imageUrl || ''
+                    },
+                    author: {
+                        id: member.id,
+                        name: member.profile.name,
+                        imageUrl: member.profile.imageUrl
+                    },
+                    chatId,
+                    chatType: chatType || 'channel'
+                });
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }, [id, socketQuery, pinned, content, fileUrl, currentMember, member, chatType, addPinnedMessage, removePinnedMessage]);
+
+    // Memoize expensive computations
+    const fileType = useMemo(() => fileUrl?.split(".").pop(), [fileUrl]);
+    const isPDF = useMemo(() => fileType === "pdf" && fileUrl, [fileType, fileUrl]);
+    const isImage = useMemo(() => !isPDF && fileUrl, [isPDF, fileUrl]);
+    
+    const permissions = useMemo(() => ({
+        isAdmin: currentMember.role === MemberRole.ADMIN,
+        isModerator: currentMember.role === MemberRole.MODERATOR,
+        isOwner: currentMember.id === member.id,
+    }), [currentMember.role, currentMember.id, member.id]);
+    
+    const canDeleteMessage = useMemo(() => 
+        !deleted && (permissions.isAdmin || permissions.isModerator || permissions.isOwner),
+        [deleted, permissions.isAdmin, permissions.isModerator, permissions.isOwner]
+    );
+    
+    const canEditMessage = useMemo(() => 
+        !deleted && permissions.isOwner && !fileUrl,
+        [deleted, permissions.isOwner, fileUrl]
+    );
+    
+    const canPinMessage = useMemo(() => 
+        !deleted,
+        [deleted]
+    );
+
     useEffect(() => {
         form.reset({
             content: content,
         })
     }, [content, form]);
 
-    const fileType = fileUrl?.split(".").pop();
-
-    const isAdmin = currentMember.role === MemberRole.ADMIN;
-    const isModerator = currentMember.role === MemberRole.MODERATOR;
-    const isOwner = currentMember.id === member.id;
-    const canDeleteMessage = !deleted && (isAdmin || isModerator || isOwner);
-    const canEditMessage = !deleted && isOwner && !fileUrl;
-    const isPDF = fileType === "pdf" && fileUrl;
-    const isImage = !isPDF && fileUrl;
-
     const isSystemMessage = useMemo(() => {
         return content === "changed the chat wallpaper" || content === "cleared the chat theme";
     }, [content]);
+
+    const isOwner = permissions.isOwner;
 
     if (isSystemMessage) {
         return (
@@ -162,7 +263,8 @@ export const ChatItem = memo(({
     return (
         <div className={cn(
             "relative group flex items-center transition w-full",
-            hasTheme ? "px-4 py-2" : "hover:bg-black/5 p-4"
+            hasTheme ? "px-4 py-2" : "hover:bg-black/5 p-4",
+            pinned && "bg-amber-50/50 dark:bg-amber-900/10 border-l-4 border-amber-400 dark:border-amber-500"
         )}>
             <div className={cn(
                 "group flex gap-x-2 items-start w-full transition-all duration-200",
@@ -197,6 +299,14 @@ export const ChatItem = memo(({
                         )}>
                             {timestamp}
                         </span>
+                        {pinned && (
+                            <div className="flex items-center gap-1 ml-2">
+                                <Pin size={12} className="text-amber-500 rotate-45" />
+                                <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                    Pinned
+                                </span>
+                            </div>
+                        )}
                     </div>
                     {isImage && (
                         <a
@@ -287,6 +397,22 @@ export const ChatItem = memo(({
                             className="cursor-pointer text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 w-4 h-4 transition"
                         />
                     </ActionTooltip>
+
+                    {canPinMessage && (
+                        <ActionTooltip label={pinned ? "Unpin" : "Pin"}>
+                            {pinned ? (
+                                <PinOff
+                                    onClick={handlePinToggle}
+                                    className="cursor-pointer text-amber-500 hover:text-amber-600 w-4 h-4 transition"
+                                />
+                            ) : (
+                                <Pin
+                                    onClick={handlePinToggle}
+                                    className="cursor-pointer text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 w-4 h-4 transition rotate-45"
+                                />
+                            )}
+                        </ActionTooltip>
+                    )}
 
                     {canEditMessage && (
                         <ActionTooltip label="Edit">

@@ -3,6 +3,7 @@ import { NextApiRequest } from "next";
 import { Server as ServerIO } from "socket.io";
 
 import { NextApiResponseServerIo } from "@/types";
+import { setIO } from "@/lib/socket";
 
 export const config = {
     api: {
@@ -44,6 +45,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         });
 
         res.socket.server.io = io;
+        setIO(io);
         console.log("[Socket.io] Socket.io server initialized");
     }
 

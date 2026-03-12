@@ -1,0 +1,12 @@
+{
+  "name": "database-fix-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "cleanup-duplicates": "node cleanup-duplicates.js",
+    "check-pin-fields": "node check-pin-migration.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.0.0"
+  }
+}

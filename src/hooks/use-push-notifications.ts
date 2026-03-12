@@ -25,15 +25,21 @@ export const usePushNotifications = () => {
 
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
-      navigator.serviceWorker.register("/sw.js").then((reg) => {
-        setRegistration(reg);
-        reg.pushManager.getSubscription().then((sub) => {
+      navigator.serviceWorker.register("/sw.js")
+        .then((reg) => {
+          console.log("Service Worker registered successfully:", reg);
+          setRegistration(reg);
+          return reg.pushManager.getSubscription();
+        })
+        .then((sub) => {
           if (sub) {
             setIsSubscribed(true);
             setSubscription(sub);
           }
+        })
+        .catch((error) => {
+          console.error("Service Worker registration failed:", error);
         });
-      });
     }
   }, []);
 
