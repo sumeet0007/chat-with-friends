@@ -29,6 +29,7 @@ interface Member {
   profile: Profile;
   lastMessage?: string;
   lastMessageDate?: string;
+  lastMessageSenderProfileId?: string;
   conversationId?: string;
 }
 
@@ -145,6 +146,13 @@ export default function DMSTabScreen() {
     try {
       const res = await api.post('/api/friends/dm', { friendId });
       const { memberId } = res.data;
+      
+      // Also mark as read when starting a DM
+      const now = new Date().toISOString();
+      const updated = { ...readTimestamps, [memberId]: now };
+      setReadTimestamps(updated);
+      AsyncStorage.setItem('chatReadTimestamps', JSON.stringify(updated)).catch(console.error);
+      
       router.push(`/(main)/conversations/${memberId}` as any);
     } catch (e) {
       console.error(e);
@@ -153,7 +161,15 @@ export default function DMSTabScreen() {
 
   const pendingRequests: FriendRequest[] = useMemo(() => data?.requests || [], [data]);
   const friends: Friend[] = useMemo(() => data?.friends || [], [data]);
-  const members: Member[] = useMemo(() => data?.members || [], [data]);
+  
+  const members: Member[] = useMemo(() => {
+    const list = data?.members || [];
+    return [...list].sort((a, b) => {
+        const dateA = a.lastMessageDate ? new Date(a.lastMessageDate).getTime() : 0;
+        const dateB = b.lastMessageDate ? new Date(b.lastMessageDate).getTime() : 0;
+        return dateB - dateA;
+    });
+  }, [data]);
 
   return (
     <SafeAreaView className="flex-1 bg-[#313338]" edges={['top']}>
@@ -231,7 +247,13 @@ export default function DMSTabScreen() {
               keyExtractor={(item) => item.id}
               contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}
               renderItem={({ item }) => {
-                const isUnread = item.lastMessageDate && (!readTimestamps[item.id] || new Date(item.lastMessageDate) > new Date(readTimestamps[item.id]));
+                // Determine if message is unread:
+                // 1. It must have a last message date
+                // 2. The sender must NOT be the current user's profile (we'll assume if lastMessageSenderProfileId matches item.profile.id, it was the other person)
+                // Actually, the current user's profile ID is not easily available here, but we know item.profile.id is the OTHER person.
+                // If lastMessageSenderProfileId === item.profile.id, it means the OTHER person sent it.
+                const isOtherPersonSender = item.lastMessageSenderProfileId === item.profile.id;
+                const isUnread = item.lastMessageDate && isOtherPersonSender && (!readTimestamps[item.id] || new Date(item.lastMessageDate) > new Date(readTimestamps[item.id]));
 
                 return (
                 <Reanimated.View entering={FadeInRight.duration(300)}>

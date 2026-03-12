@@ -39,6 +39,13 @@ export async function GET() {
                     memberOne: { include: { profile: true } },
                     memberTwo: { include: { profile: true } },
                     directMessages: {
+                        include: {
+                            member: {
+                                include: {
+                                    profile: true
+                                }
+                            }
+                        },
                         orderBy: { createdAt: "desc" },
                         take: 1
                     }
@@ -54,10 +61,15 @@ export async function GET() {
                         profile: otherMember.profile,
                         lastMessage: c.directMessages[0]?.content || null,
                         lastMessageDate: c.directMessages[0]?.createdAt || null,
+                        lastMessageSenderProfileId: c.directMessages[0]?.member?.profileId || null,
                         conversationId: c.id
                     };
                 })
-                .sort((a, b) => new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime());
+                .sort((a, b) => {
+                    const dateA = a.lastMessageDate ? new Date(a.lastMessageDate).getTime() : 0;
+                    const dateB = b.lastMessageDate ? new Date(b.lastMessageDate).getTime() : 0;
+                    return dateB - dateA;
+                });
         }
 
         // Get friends
