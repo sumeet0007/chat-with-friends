@@ -125,17 +125,18 @@ export default async function handler(
         // Trigger Notifications in the background so it doesn't block message sending
         const sendNotifications = async () => {
             try {
+                // Trigger Web Push
                 const pushSubscriptions = await db.pushSubscription.findMany({
                     where: { profileId: otherMember.profileId }
                 });
 
-                const sendPushPromises = pushSubscriptions.map((sub: any) => {
+                pushSubscriptions.forEach((sub: any) => {
                     const payload = JSON.stringify({
                         title: `New message from ${profile.name}`,
                         body: content.length > 50 ? content.substring(0, 50) + "..." : content,
                         url: `/friends/conversations/${otherMember.id}`
                     });
-                    return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
+                    import("@/lib/web-push").then(({ sendWebPushNotification }) => {
                         const formattedSub = {
                             endpoint: sub.endpoint,
                             keys: {
@@ -143,24 +144,22 @@ export default async function handler(
                                 p256dh: sub.p256dh
                             }
                         };
-                        return sendWebPushNotification(formattedSub as any, payload);
-                    });
+                        sendWebPushNotification(formattedSub as any, payload);
+                    }).catch(err => console.error("Web Push Error", err));
                 });
 
-                Promise.all(sendPushPromises).catch(err => console.error("Push Error", err));
+                // Trigger Expo Push Notification (Independent of Web Push)
+                import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
+                    sendExpoPushNotification(
+                        otherMember.profileId,
+                        profile.name,
+                        content.length > 50 ? content.substring(0, 50) + "..." : content,
+                        { url: `/friends/conversations/${otherMember.id}` }
+                    ).catch(err => console.error("Expo Push Error", err));
+                }).catch(err => console.error("Failed to load expo-push", err));
             } catch (pushError) {
-                console.error("Failed to send web push", pushError);
+                console.error("Failed to send notifications", pushError);
             }
-
-            // Trigger Expo Push Notification
-            import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
-                sendExpoPushNotification(
-                    otherMember.profileId,
-                    profile.name,
-                    content.length > 50 ? content.substring(0, 50) + "..." : content,
-                    { url: `/friends/conversations/${otherMember.id}` }
-                ).catch(err => console.error("Expo Push Error", err));
-            }).catch(err => console.error("Failed to load expo-push", err));
         };
 
         sendNotifications();

@@ -137,17 +137,18 @@ export default async function handler(
                     .map(m => m.profileId)
                     .filter(id => id !== profile.id);
 
+                // Trigger Web Push
                 const pushSubscriptions = await db.pushSubscription.findMany({
                     where: { profileId: { in: memberProfileIds } }
                 });
 
-                const sendPushPromises = pushSubscriptions.map((sub: any) => {
+                pushSubscriptions.forEach((sub: any) => {
                     const payload = JSON.stringify({
                         title: `New message in ${server.name} #${channel.name}`,
                         body: `${profile.name}: ${content.length > 50 ? content.substring(0, 50) + "..." : content}`,
                         url: `/servers/${serverId}/channels/${channelId}`
                     });
-                    return import("@/lib/web-push").then(({ sendWebPushNotification }) => {
+                    import("@/lib/web-push").then(({ sendWebPushNotification }) => {
                         const formattedSub = {
                             endpoint: sub.endpoint,
                             keys: {
@@ -155,13 +156,11 @@ export default async function handler(
                                 p256dh: sub.p256dh
                             }
                         };
-                        return sendWebPushNotification(formattedSub as any, payload);
-                    });
+                        sendWebPushNotification(formattedSub as any, payload);
+                    }).catch(err => console.error("Web Push Error", err));
                 });
-
-                Promise.all(sendPushPromises).catch(err => console.error("Push Error", err));
                 
-                // Trigger Expo Push Notification
+                // Trigger Expo Push Notification (Independent)
                 import("@/lib/expo-push").then(({ sendExpoPushNotification }) => {
                     memberProfileIds.forEach(id => {
                         sendExpoPushNotification(
