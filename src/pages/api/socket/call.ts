@@ -59,12 +59,13 @@ export default async function handler(
         const otherMember = conversation.memberOne.profileId === profile.id ? conversation.memberTwo : conversation.memberOne;
         const currentMember = conversation.memberOne.profileId === profile.id ? conversation.memberOne : conversation.memberTwo;
 
-        const notificationKey = `user:${otherMember.profileId}:calls`;
+        const notificationKey = `user:${otherMember.profile.userId}:calls`;
 
         if (action === "invite") {
+            const { callType } = req.body;
             const message = await db.directMessage.create({
                 data: {
-                    content: "☎️ Started a call",
+                    content: `☎️ Started a ${callType === 'video' ? 'video' : 'voice'} call`,
                     conversationId: conversationId as string,
                     memberId: currentMember.id,
                 },
@@ -86,6 +87,7 @@ export default async function handler(
                 conversationId,
                 serverId: currentMember.serverId,
                 callerMemberId: currentMember.id,
+                callType: callType || 'audio',
                 caller: {
                     id: profile.id,
                     name: profile.name,
@@ -117,7 +119,7 @@ export default async function handler(
             res?.socket?.server?.io?.emit(channelKey, message);
 
             // Signal back to caller that call was rejected
-            const callerNotificationKey = `user:${profile.id === conversation.memberOne.profileId ? conversation.memberTwo.profileId : conversation.memberOne.profileId}:calls`;
+            const callerNotificationKey = `user:${profile.userId === conversation.memberOne.profile.userId ? conversation.memberTwo.profile.userId : conversation.memberOne.profile.userId}:calls`;
              res?.socket?.server?.io?.emit(callerNotificationKey, {
                 type: "call_rejected",
                 conversationId,
