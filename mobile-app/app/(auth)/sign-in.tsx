@@ -18,6 +18,9 @@ export default function SignInScreen() {
     const onSignInPress = useCallback(async () => {
         if (!isLoaded) return;
 
+        // Feedback when pressing the button
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
         const trimmedIdentifier = emailAddress.trim();
         if (!trimmedIdentifier) {
             setError("Please enter your email or username.");
@@ -37,7 +40,7 @@ export default function SignInScreen() {
 
             if (completeSignIn.status === "complete") {
                 await setActive({ session: completeSignIn.createdSessionId });
-                Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Success);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
                 // Small delay to ensure session propagation
                 setTimeout(() => {
@@ -51,14 +54,13 @@ export default function SignInScreen() {
             console.error("SignIn Error:", JSON.stringify(err, null, 2));
             const clerkError = err.errors?.[0];
 
-            // Specifically check for format invalid vs other errors
             if (clerkError?.code === "form_param_format_invalid") {
                 setError("That email or username doesn't look right. Please check for typos.");
             } else {
                 setError(clerkError?.longMessage || clerkError?.message || "Invalid email or password");
             }
 
-            Haptics.notificationAsync?.(Haptics.NotificationFeedbackType.Error);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         } finally {
             setLoading(false);
         }

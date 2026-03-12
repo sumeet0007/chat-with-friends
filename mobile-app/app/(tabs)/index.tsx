@@ -44,7 +44,7 @@ interface FriendRequest {
   senderId: string;
 }
 
-export default function DMSTabScreen() {
+function DMSTabScreen() {
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useAuth();
@@ -269,11 +269,6 @@ export default function DMSTabScreen() {
               keyExtractor={(item) => item.id}
               contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}
               renderItem={({ item }) => {
-                // Determine if message is unread:
-                // 1. It must have a last message date
-                // 2. The sender must NOT be the current user's profile (we'll assume if lastMessageSenderProfileId matches item.profile.id, it was the other person)
-                // Actually, the current user's profile ID is not easily available here, but we know item.profile.id is the OTHER person.
-                // If lastMessageSenderProfileId === item.profile.id, it means the OTHER person sent it.
                 const isOtherPersonSender = item.lastMessageSenderProfileId === item.profile.id;
                 const isUnread = item.lastMessageDate && isOtherPersonSender && (!readTimestamps[item.id] || new Date(item.lastMessageDate) > new Date(readTimestamps[item.id]));
 
@@ -412,3 +407,5 @@ export default function DMSTabScreen() {
     </SafeAreaView>
   );
 }
+
+export default DMSTabScreen;

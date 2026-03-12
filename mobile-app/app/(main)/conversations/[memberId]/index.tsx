@@ -224,10 +224,58 @@ export default function ConversationScreen() {
             <TouchableOpacity onPress={() => setShowThemePicker(true)} className="p-2 mr-1">
                 <Palette size={22} color="#DBDEE1" />
             </TouchableOpacity>
-            <TouchableOpacity className="p-2" onPress={() => router.push({ pathname: '/(main)/call', params: { conversationId: conversationIdValue, memberId: otherMember?.id, callType: 'audio' } as any })}>
+            <TouchableOpacity 
+              className="p-2" 
+              onPress={async () => {
+                Haptics?.impactAsync?.(Haptics?.ImpactFeedbackStyle?.Medium);
+                try {
+                  await api.post('/api/socket/call', {
+                    conversationId: conversationIdValue,
+                    action: 'invite',
+                    callType: 'audio'
+                  });
+                } catch (e) {
+                  console.error("Failed to send call invitation", e);
+                }
+                router.push({ 
+                  pathname: '/(main)/call', 
+                  params: { 
+                    conversationId: conversationIdValue, 
+                    memberId: otherMember?.id, 
+                    memberName: otherMember?.profile?.name,
+                    memberImage: otherMember?.profile?.imageUrl,
+                    callType: 'audio' 
+                  } as any 
+                });
+              }}
+            >
               <Phone size={22} color="#DBDEE1" />
             </TouchableOpacity>
-            <TouchableOpacity className="p-2" onPress={() => router.push({ pathname: '/(main)/call', params: { conversationId: conversationIdValue, memberId: otherMember?.id, callType: 'video' } as any })}>
+            <TouchableOpacity 
+              className="p-2" 
+              onPress={async () => {
+                Haptics?.impactAsync?.(Haptics?.ImpactFeedbackStyle?.Medium);
+                try {
+                  await api.post('/api/socket/call', {
+                    conversationId: conversationIdValue,
+                    action: 'invite',
+                    callType: 'video'
+                  });
+                } catch (e) {
+                  console.error("Failed to send call invitation", e);
+                }
+                router.push({ 
+                  pathname: '/(main)/call', 
+                  params: { 
+                    conversationId: conversationIdValue, 
+                    memberId: otherMember?.id, 
+                    memberName: otherMember?.profile?.name,
+                    memberImage: otherMember?.profile?.imageUrl,
+                    callType: 'video' 
+                  } as any 
+                });
+              }}
+            >
               <Video size={22} color="#DBDEE1" />
             </TouchableOpacity>
         </View>

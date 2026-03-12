@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "mobileapp",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -14,7 +15,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sumeet.chatwithfriends"
+      "bundleIdentifier": "com.sumeet.chatwithfriends",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio",
+          "voip",
+          "fetch",
+          "remote-notification"
+        ]
+      }
     },
     "android": {
       "package": "com.sumeet.chatwithfriends",
@@ -25,7 +34,14 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "googleServicesFile": "./google-services.json",
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.BLUETOOTH",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.WAKE_LOCK"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -44,7 +60,8 @@
       [
         "expo-av",
         {
-          "microphonePermission": "Allow ChatWithFriends to access your microphone."
+          "microphonePermission": "Allow ChatWithFriends to access your microphone.",
+          "cameraPermission": "Allow ChatWithFriends to access your camera for video calls."
         }
       ],
       "expo-font",
@@ -60,7 +77,9 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "eas": {
         "projectId": "3ae4947f-b0cc-4c07-a0c7-002b08311a4c"
       }

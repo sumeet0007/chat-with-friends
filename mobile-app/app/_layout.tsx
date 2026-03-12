@@ -1,4 +1,9 @@
 import "../global.css";
+import { registerGlobals } from '@livekit/react-native';
+
+// Initialize LiveKit globals
+registerGlobals();
+
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -14,9 +19,26 @@ import { TelemetryProvider } from '@/providers/telemetry-provider';
 import { useAuth } from '@clerk/clerk-expo';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { SocketProvider } from '@/providers/socket-provider';
+import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
 
 import { ErrorBoundaryProps } from 'expo-router';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Platform } from 'react-native';
+import RNCallKeep from 'react-native-callkeep';
+
+const callKeepOptions = {
+  ios: {
+    appName: 'ChatWithFriends',
+  },
+  android: {
+    alertTitle: 'Permissions required',
+    alertDescription: 'This application needs to access your phone accounts',
+    cancelButton: 'Cancel',
+    okButton: 'ok',
+    imageName: 'phone_account_icon',
+    additionalPermissions: [],
+    selfManaged: true,
+  },
+};
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (
@@ -27,17 +49,11 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
           <Text style={{ color: '#F23F42', fontSize: 24, fontWeight: 'bold', marginTop: 16, textAlign: 'center' }}>
             Fatal App Error
           </Text>
-          <Text style={{ color: '#DBDEE1', fontSize: 16, marginTop: 8, textAlign: 'center' }}>
-            The app encountered an unexpected error and needs to recover. Please take a screenshot of this page for the developer.
-          </Text>
         </View>
 
         <View style={{ backgroundColor: '#111214', padding: 16, borderRadius: 12, marginBottom: 24 }}>
           <Text style={{ color: '#F23F42', fontFamily: 'monospace', fontWeight: 'bold', marginBottom: 8 }}>
             {error.name}: {error.message}
-          </Text>
-          <Text style={{ color: '#80848E', fontFamily: 'monospace', fontSize: 12 }}>
-            {error.stack}
           </Text>
         </View>
 
@@ -55,13 +71,30 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 const queryClient = new QueryClient();
 
-if (!publishableKey) {
-  throw new Error('Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env');
-}
-
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayoutNav() {
+  const colorScheme = useColorScheme();
+  const { isSignedIn } = useAuth();
+
+  usePushNotifications(isSignedIn);
+
+  return (
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <View style={{ flex: 1 }}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(main)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+        <IncomingCallOverlay />
+      </View>
+    </ThemeProvider>
+  );
+}
+
+function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -76,12 +109,15 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // No logging here to keep terminal clean
-
-  // We'll proceed even if fonts aren't loaded to avoid black screen hangs
-  // if (!loaded) {
-  //   return null;
-  // }
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+        RNCallKeep.setup(callKeepOptions).then(accepted => {
+            console.log('CallKeep Setup:', accepted);
+        }).catch(err => {
+            console.log('CallKeep Setup Error:', err);
+        });
+    }
+  }, []);
 
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
@@ -100,21 +136,4 @@ export default function RootLayout() {
   );
 }
 
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-  const { isSignedIn } = useAuth();
-
-  // Register push notifications when signed in
-  usePushNotifications(isSignedIn);
-
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(main)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
-  );
-}
+export default RootLayout;
