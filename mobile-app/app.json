@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "mobile-app",
-    "slug": "mobile-app",
+    "name": "PulseConnect",
+    "slug": "pulseconnect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobileapp",
+    "scheme": "pulseconnect",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -21,12 +21,13 @@
           "audio",
           "voip",
           "fetch",
-          "remote-notification",
-          "audio",
-          "voip",
-          "fetch",
           "remote-notification"
-        ]
+        ],
+        "NSCameraUsageDescription": "Allow PulseConnect to access your camera for video calls.",
+        "NSMicrophoneUsageDescription": "Allow PulseConnect to access your microphone for calls.",
+        "NSPhotoLibraryUsageDescription": "Allow PulseConnect to access your photos to share images.",
+        "NSLocationWhenInUseUsageDescription": "Allow PulseConnect to use your location to enhance your experience.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow PulseConnect to use your location for app features."
       }
     },
     "android": {
@@ -39,14 +40,6 @@
       },
       "googleServicesFile": "./google-services.json",
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.BLUETOOTH",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.WAKE_LOCK",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
@@ -68,14 +61,14 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow ChatWithFriends to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Allow PulseConnect to use your location."
         }
       ],
       [
         "expo-av",
         {
-          "microphonePermission": "Allow ChatWithFriends to access your microphone.",
-          "cameraPermission": "Allow ChatWithFriends to access your camera for video calls."
+          "microphonePermission": "Allow PulseConnect to access your microphone.",
+          "cameraPermission": "Allow PulseConnect to access your camera for video calls."
         }
       ],
       "expo-font",

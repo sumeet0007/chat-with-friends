@@ -27,7 +27,7 @@ import RNCallKeep from 'react-native-callkeep';
 
 const callKeepOptions = {
   ios: {
-    appName: 'ChatWithFriends',
+    appName: 'PulseConnect',
   },
   android: {
     alertTitle: 'Permissions required',

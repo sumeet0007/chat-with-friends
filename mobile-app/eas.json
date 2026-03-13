@@ -18,7 +18,13 @@
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsucHVsc2Vjb25uZWN0LmNvLmluJA",
+        "EXPO_PUBLIC_API_URL": "https://chat-with-friends-production.up.railway.app",
+        "EXPO_PUBLIC_ROUTER_APP_ROOT": "app",
+        "EXPO_ROUTER_APP_ROOT": "app"
+      }
     }
   },
   "submit": {

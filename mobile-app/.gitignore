@@ -33,6 +33,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Firebase service account (must never ship in client repo)
+service-account.json
+
 # typescript
 *.tsbuildinfo
 
