@@ -86,10 +86,14 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "ab42a0a8-408a-4523-a905-d9f6cea9b5ed"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
-    }
+    },
+    "owner": "sumeet97"
   }
 }
