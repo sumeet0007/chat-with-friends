@@ -1,4 +1,3 @@
-import "../global.css";
 import { registerGlobals } from '@livekit/react-native';
 
 // Initialize LiveKit globals
